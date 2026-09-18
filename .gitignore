@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+
+# macOS
+.DS_Store
+
+# Application documents and private data
+*.docx
+*.pdf
+*.xlsx
+*.xls
+~$*
+
+# Local application archive
+JAPPS/
+japps/
+
+# Environment / secrets
+.env
+.env.*
