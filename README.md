@@ -1,23 +1,24 @@
 # JAPP — Job Application Processing Pipeline
 
-JAPP is a Python automation for organising job application documents and maintaining an Excel application tracker.
+JAPP is a Python automation I built to handle the repetitive administration that follows an AI-assisted job application workflow. After tailored CVs, cover letters and job descriptions land in Downloads, JAPP identifies them, extracts the company and role from their filenames, matches related documents, organises them into a structured application archive, and automatically updates an Excel application tracker.
 
-It turns a repetitive application-admin workflow into a simple pipeline:
+## Workflow
 
 ```text
-Downloads
-   ↓
-Detect CV / Cover Letter / Job Description
-   ↓
-Parse company + role from filenames
-   ↓
-Normalise and match related documents
-   ↓
-Organise into JAPPS / Company / Role
-   ↓
-Scan the application archive
-   ↓
-Update the Excel tracker
+Job Description
+      ↓
+AI-assisted CV / Cover Letter tailoring
+      ↓
+Application submitted
+      ↓
+Files land in Downloads
+      ↓
+JAPP
+ ├─ Detects CV / Cover Letter / Job Description
+ ├─ Identifies company + role
+ ├─ Matches related documents
+ ├─ Organises the application archive
+ └─ Updates the Excel tracker
 ```
 
 ## What it does
