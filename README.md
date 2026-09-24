@@ -91,3 +91,36 @@ The repository contains the automation code only. Personal CVs, cover letters, j
 ## Status
 
 Active development.
+
+
+## Job discovery — V8.1
+
+JAPP also includes a UK job-discovery pipeline in `japp_v8_1_multisource.py`.
+
+The discovery workflow uses broad search terms to find vacancies quickly, deduplicates results, removes obvious unrelated or senior roles, and saves only the relevant shortlist for manual review.
+
+Current sources include:
+
+- Indeed via JobSpy;
+- Reed;
+- Totaljobs;
+- LinkedIn via JobSpy with a separately configurable result cap;
+- adapters for CV-Library and GOV.UK Find a Job, subject to source availability.
+
+The discovery engine does not submit applications. The intended workflow is:
+
+```text
+Broad keyword sweep
+      ↓
+Multi-source vacancy collection
+      ↓
+Deduplication
+      ↓
+Relevance filtering
+      ↓
+Relevant-jobs-only Excel shortlist
+      ↓
+Manual JD review / CV tailoring / application
+```
+
+See `JAPP_V8.1_Bash_Commands.txt` for first-run and recurring commands.

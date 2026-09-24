@@ -1,0 +1,74 @@
+JAPP V8.1 — BASH COMMANDS
+
+1) FIRST TIME — INSTALL REQUIREMENTS
+
+pip install python-jobspy pandas openpyxl httpx beautifulsoup4
+
+
+2) FIRST FULL UK JOB SEARCH
+Indeed + Reed + Totaljobs
+
+python japp_v8_1_multisource.py \
+  --sites indeed,reed,totaljobs \
+  --fresh \
+  --out "job_search_output_v8_1/uk_jobs_$(date +%Y-%m-%d).xlsx"
+
+
+3) FIRST FULL LINKEDIN SEARCH
+LinkedIn limited to 20 results per keyword
+
+python japp_v8_1_multisource.py \
+  --sites linkedin \
+  --linkedin-results 20 \
+  --fresh \
+  --out "job_search_output_v8_1/linkedin_jobs_$(date +%Y-%m-%d).xlsx"
+
+
+4) ANY FUTURE UK SEARCH
+Run this again whenever you want fresh vacancies
+
+python japp_v8_1_multisource.py \
+  --sites indeed,reed,totaljobs \
+  --fresh \
+  --out "job_search_output_v8_1/uk_jobs_$(date +%Y-%m-%d).xlsx"
+
+
+5) ANY FUTURE LINKEDIN SEARCH
+Run this again whenever you want fresh LinkedIn vacancies
+
+python japp_v8_1_multisource.py \
+  --sites linkedin \
+  --linkedin-results 20 \
+  --fresh \
+  --out "job_search_output_v8_1/linkedin_jobs_$(date +%Y-%m-%d).xlsx"
+
+
+OPTIONAL — QUICK 3-KEYWORD UK TEST
+
+python japp_v8_1_multisource.py \
+  --sites indeed,reed,totaljobs \
+  --keyword-limit 3 \
+  --fresh \
+  --out "job_search_output_v8_1/test_uk_$(date +%Y-%m-%d).xlsx"
+
+
+OPTIONAL — QUICK 3-KEYWORD LINKEDIN TEST
+
+python japp_v8_1_multisource.py \
+  --sites linkedin \
+  --linkedin-results 20 \
+  --keyword-limit 3 \
+  --fresh \
+  --out "job_search_output_v8_1/test_linkedin_$(date +%Y-%m-%d).xlsx"
+
+
+NOTES
+
+- Do not use --keyword-limit for a full sweep.
+- --fresh is intentional: it forces JAPP to search every keyword again.
+- $(date +%Y-%m-%d) automatically puts today's date in the filename.
+- A future run therefore creates a new dated file instead of overwriting an older run.
+- UK and LinkedIn results stay in separate Excel files.
+- CV-Library is excluded because it returned HTTP 403.
+- GOV.UK Find a Job is excluded because it returned HTTP 503.
+- LinkedIn remains deliberately limited to reduce request volume.
