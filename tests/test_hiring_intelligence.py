@@ -9,7 +9,7 @@ from openpyxl import Workbook, load_workbook
 
 from japp_hiring_intelligence import (
     SHEET, canonical, classify, generate_queries, import_records,
-    load_config, save_leads,
+    load_config, save_leads, safe_excel,
 )
 
 CONFIG = {
@@ -126,6 +126,11 @@ class HiringIntelligenceTests(unittest.TestCase):
             json_file = Path(td) / "posts.json"
             json_file.write_text(json.dumps({"posts": [{"post_url": "https://linkedin.com/posts/2"}]}))
             self.assertEqual(len(import_records(json_file)), 1)
+
+    def test_untrusted_excel_text_is_not_a_formula(self):
+        self.assertEqual(safe_excel("=HYPERLINK(\"https://evil.example\")"),
+                         "'=HYPERLINK(\"https://evil.example\")")
+        self.assertEqual(safe_excel("Normal employer"), "Normal employer")
 
     def test_reject_non_http_post_urls(self):
         self.assertEqual(canonical("file:///Users/sam/private"), "")
