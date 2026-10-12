@@ -1,0 +1,40 @@
+{
+  "hiring_signals": [
+    "#hiring",
+    "I'm hiring",
+    "We're hiring",
+    "Join my team",
+    "Looking for candidates",
+    "Hiring now"
+  ],
+  "keywords": [
+    "Energy Analyst",
+    "Market Risk",
+    "Commodity Analyst",
+    "Power Analyst",
+    "LNG",
+    "Data Analyst",
+    "Business Analyst",
+    "Investment Analyst",
+    "Corporate Finance",
+    "Project Finance",
+    "Python",
+    "SQL",
+    "Process Improvement",
+    "Project Controls",
+    "Graduate Analyst",
+    "Commercial Analyst"
+  ],
+  "seniority": [
+    "Internship",
+    "Graduate",
+    "Entry-level",
+    "Junior",
+    "Analyst",
+    "Associate"
+  ],
+  "location": "UK",
+  "posted_within_days": 7,
+  "max_queries": 36,
+  "minimum_score": 45
+}
