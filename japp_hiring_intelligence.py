@@ -141,8 +141,8 @@ def get_brave_results(query, api_key, recency_days=7, count=10):
             continue
         leads.append({
             "post_url": url,
-            "title": clean(item.get("title")),
-            "snippet": clean(item.get("description")),
+            "title": "",  # Search-result titles may describe the POSTER, not the vacancy.
+            "snippet": clean(item.get("title")) + " " + clean(item.get("description")),
             "post_date": "",  # Search-index freshness is NOT an observed post date.
             "source": "Brave Search (public index)",
         })
@@ -281,6 +281,13 @@ def classify(raw, config, today=None):
     return row
 
 
+def safe_excel(value):
+    """Never interpret untrusted post text as an Excel formula."""
+    if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")):
+        return "'" + value
+    return value
+
+
 def save_leads(path, candidates, include_excluded=False):
     """Append/update one tab; preserve other sheets and manual outreach edits."""
     path = Path(path).expanduser()
@@ -320,7 +327,7 @@ def save_leads(path, candidates, include_excluded=False):
                           "Review Status", "Why Matched", "Last Seen",
                           "Target Seniority", "Seniority Confidence", "Sponsorship"):
                 if lead.get(field) not in ("", None):
-                    sheet.cell(rownum, col[field]).value = lead[field]
+                    sheet.cell(rownum, col[field]).value = safe_excel(lead[field])
             for field in ("Company", "Vacancy / Role", "Posted By", "Poster Job Title",
                           "Post Date", "Location", "Job URL", "Post Excerpt", "Source",
                           "Contact Type", "Contact Confidence"):
@@ -328,7 +335,7 @@ def save_leads(path, candidates, include_excluded=False):
                     sheet.cell(rownum, col[field]).value = lead[field]
             updated += 1
         else:
-            sheet.append([lead.get(column, "") for column in HEADERS])
+            sheet.append([safe_excel(lead.get(column, "")) for column in HEADERS])
             rownum = sheet.max_row
             existing[key] = rownum
             added += 1
