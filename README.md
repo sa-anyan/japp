@@ -124,3 +124,104 @@ Manual JD review / CV tailoring / application
 ```
 
 See `JAPP_V8.1_Bash_Commands.txt` for first-run and recurring commands.
+
+
+## Hiring Intelligence — hiring posts and direct outreach leads
+
+Run this **separately** from V8.1 job-board discovery. It helps find announcements
+such as \`#hiring\` + \`Energy Analyst\` + \`Graduate\`, identifies junior vacancies
+even when the author is a senior manager, and tracks likely contacts for outreach.
+
+The configurable search dimensions are in \`hiring_intelligence_config.json\`:
+
+- **Hiring signals:** \`#hiring\`, \`I'm hiring\`, \`We're hiring\`, \`Join my team\`, etc.
+- **Keywords:** several role/sector/skills phrases, each matched independently.
+- **Role seniority:** internship, graduate, entry-level, junior, analyst, associate.
+- **Context:** UK, freshness window, search query budget and minimum match score.
+
+Seniority filtering applies to **the vacancy, never the author's job title**.
+Where a post is vague, its role, post date, employer, contact and sponsorship
+status are left unverified for human review. Roles explicitly excluding
+sponsorship or clearly senior-only are normally filtered out.
+
+### First run in PyCharm / Terminal
+
+From the cloned \`japp\` folder:
+
+\`\`\`bash
+git pull origin main
+python3 -m pip install -r requirements.txt
+python3 japp_hiring_intelligence.py --print-queries
+\`\`\`
+
+The last command prints targeted searches with browser links so you can find
+posts manually without providing login credentials or API keys.
+
+### Add a hiring post to your current application tracker
+
+\`\`\`bash
+python3 japp_hiring_intelligence.py \
+  --add-post "https://www.linkedin.com/posts/EXAMPLE" \
+  --title "Junior Energy Analyst" \
+  --snippet "#hiring Junior Energy Analyst in London" \
+  --workbook "/PATH/TO/JAPPS/tracker.xlsx"
+\`\`\`
+
+Replace \`EXAMPLE\` with a **real post URL** and adjust the title/snippet to
+the public information you observed. The module adds a \`Hiring Leads\` tab
+while preserving the existing tracker tabs, contact statuses, notes and
+follow-up dates. If you omit \`--workbook\`, it creates \`Hiring_Leads.xlsx\`
+in your current working directory.
+
+### Import several manually gathered posts
+
+Create a CSV with columns such as:
+
+\`\`\`csv
+post_url,title,snippet,poster,poster_role,post_date,company,location,job_url
+\`\`\`
+
+Then run:
+
+\`\`\`bash
+python3 japp_hiring_intelligence.py \
+  --import-csv "/PATH/TO/posts.csv" \
+  --workbook "/PATH/TO/JAPPS/tracker.xlsx"
+\`\`\`
+
+JSON lists are supported using \`--import-json\`.
+
+### Optional automated public search (Brave Search API)
+
+If you have a Brave Search API subscription, set \`BRAVE_SEARCH_API_KEY\` as a
+local environment variable (never commit it), and run:
+
+\`\`\`bash
+python3 japp_hiring_intelligence.py \
+  --search-brave --max-queries 5 \
+  --workbook "/PATH/TO/JAPPS/tracker.xlsx"
+\`\`\`
+
+Increase \`--max-queries\` after inspecting results and API usage. Results are
+limited to public search-index snippets linking to LinkedIn posts; the tool
+**does not visit LinkedIn, log in, scrape profiles, bypass restrictions or send
+messages**. A search-index freshness filter is **not** proof of the original
+post date, so dates remain unverified until independently checked. Actual
+discovery depends on your search provider's index and API access.
+
+### Output: Hiring Leads tab
+
+Includes original post link, role, company, potential contact, contact
+confidence, role seniority, matched keywords, recency, visa-sponsorship status,
+match score, reason, job URL, outreach status and follow-up notes. Existing
+leads are deduplicated by URL so a second search doesn't erase your outreach
+history. The score is an **internal prioritisation heuristic**, not a verified
+probability of being hired.
+
+### Tests
+
+\`\`\`bash
+python3 -m unittest discover -s tests -p "test_hiring_intelligence.py" -v
+\`\`\`
+
+Do not commit real application trackers, post contact lists or API keys.
