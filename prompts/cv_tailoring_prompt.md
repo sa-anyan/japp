@@ -21,7 +21,7 @@ Gutter position: Left
 
 Name First letter capitalised, Arial 18-20pt. (Align centre)
 Right after 3-4pt layout spacing
-Then Contact details like the example in 8 - 9pt arial : London, UK | {phone} | {email}  | LinkedIn | Portfolio & Models: {portfolio_url}  (Align Center)
+Then Contact details like the example in 8 - 9pt arial : London, UK | [phone from master CV] | [email from master CV]  | LinkedIn | Portfolio & Models: [portfolio link from master CV]  (Align Center)
 
 Body text in 9.5 Arial
 
@@ -320,4 +320,4 @@ Samuel Anyan_Company Name_Job title_CV (Include spaces)
 
 ## Runtime inputs
 
-Use the supplied master CV as the sole source of candidate evidence. Substitute `{company}`, `{role}`, `{job_description}`, and `{research_summary}` when available. Company research may inform relevance and selection, but must not introduce new candidate claims. Load personal contact fields `{phone}`, `{email}`, and `{portfolio_url}` from private local configuration, not this public repository. Where there is no verified job description, do not invent one; ask for a separate speculative-approach workflow.
+Use the supplied master CV as the sole source of candidate evidence. Substitute `{company}`, `{role}`, `{job_description}`, and `{research_summary}` when available. Company research may inform relevance and selection, but must not introduce new candidate claims. Load personal contact fields `[phone from master CV]`, `[email from master CV]`, and `[portfolio link from master CV]` from private local configuration, not this public repository. Where there is no verified job description, do not invent one; ask for a separate speculative-approach workflow.
