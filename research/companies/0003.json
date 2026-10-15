@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "company_id": 3,
+  "company": "FOURWINDS ENERGY LTD T/A BOILUP ENERGY SOLUTIONS",
+  "research_status": "researched",
+  "research_date": "2026-10-15",
+  "website": "https://boilup.co.uk/",
+  "business_model": "Markets insulation, heating and heat-pump installations associated with grants; exact payment mechanics unverified.",
+  "entry_level_fit": "Assist with project tracking, eligibility evidence and operational reporting.",
+  "current_workflow": "Public grant eligibility checker exists; internal case tracking not verified.",
+  "workflow_evidence": "public_business_activity_only",
+  "opportunity": "Check installation document completeness before staff submission.",
+  "proposed_product": {
+    "name": "Retrofit Evidence Pack Validator",
+    "description": "Check installation document completeness before staff submission.",
+    "architecture": "Synthetic case inventories → configurable document rules → exception flags and audit manifest",
+    "mvp_scope": "Demonstration using synthetic data only; validate operational assumptions with company",
+    "build_effort": "few_prompts",
+    "existing_project_match": "Tema LNG readiness and punch-list tracking",
+    "already_built": false
+  },
+  "impact_model": {
+    "metric": "Validated hours saved per review cycle",
+    "calculation": "(Measured manual minutes - measured prototype minutes) × verified case volume; value hours using agreed loaded rate",
+    "assumptions": [
+      "No company baseline has been measured",
+      "No monetary or time saving is asserted"
+    ],
+    "estimated_value": null,
+    "evidence_level": "unknown"
+  },
+  "existing_tools_check": "Internal adoption and availability of similar tools have not been established; confirm before claiming a product gap.",
+  "confidence": "medium",
+  "sources": [
+    {
+      "url": "https://boilup.co.uk/",
+      "supports": "Public business identity or offering; does not verify internal tool gap",
+      "accessed_at": "2026-10-15"
+    }
+  ]
+}

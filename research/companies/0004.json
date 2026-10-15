@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "company_id": 4,
+  "company": "Imshal Commercial Trading Ltd /TA Kitchen Fusion",
+  "research_status": "needs_brainstorming",
+  "research_date": "2026-10-15",
+  "website": null,
+  "business_model": "Trading identity and commercial activities remain unverified; possible hospitality link only.",
+  "entry_level_fit": "Conditional stock and waste analytics if food-service operations are validated.",
+  "current_workflow": "Unknown.",
+  "workflow_evidence": "unknown",
+  "opportunity": "First verify actual operations and technology before pitching.",
+  "proposed_product": {
+    "name": "Conditional Food Stock & Waste Mini-Dashboard",
+    "description": "First verify actual operations and technology before pitching.",
+    "architecture": "Sample sales and stock CSV → pandas reorder rules and waste variance → dashboard",
+    "mvp_scope": "Demonstration using synthetic data only; validate operational assumptions with company",
+    "build_effort": "few_prompts",
+    "existing_project_match": "Excel spare-parts reorder dashboard",
+    "already_built": false
+  },
+  "impact_model": {
+    "metric": "Validated hours saved per review cycle",
+    "calculation": "(Measured manual minutes - measured prototype minutes) × verified case volume; value hours using agreed loaded rate",
+    "assumptions": [
+      "No company baseline has been measured",
+      "No monetary or time saving is asserted"
+    ],
+    "estimated_value": null,
+    "evidence_level": "unknown"
+  },
+  "existing_tools_check": "Internal adoption and availability of similar tools have not been established; confirm before claiming a product gap.",
+  "confidence": "low",
+  "sources": [
+    {
+      "url": "https://sponsorarchive.com/sponsors/skilled-worker/barking",
+      "supports": "Public business identity or offering; does not verify internal tool gap",
+      "accessed_at": "2026-10-15"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "company_id": 8,
+  "company": "KYY Trinity Fuel UK Ltd",
+  "research_status": "needs_verification",
+  "research_date": "2026-10-15",
+  "website": null,
+  "business_model": "Companies House indicates food and beverage convenience retail rather than oil-and-gas engineering.",
+  "entry_level_fit": "Potential inventory and margin analysis; weak fit to the target engineering sector.",
+  "current_workflow": "Retail systems and replenishment workflow unknown.",
+  "workflow_evidence": "unknown",
+  "opportunity": "Test whether daily replenishment exceptions consume material staff time.",
+  "proposed_product": {
+    "name": "Small Retail Replenishment Exception Tool",
+    "description": "Test whether daily replenishment exceptions consume material staff time.",
+    "architecture": "Synthetic sales and inventory CSV → reorder exception engine → weekly review report",
+    "mvp_scope": "Demonstration using synthetic data only; validate operational assumptions with company",
+    "build_effort": "few_prompts",
+    "existing_project_match": "Tema LNG spare-parts dashboard",
+    "already_built": false
+  },
+  "impact_model": {
+    "metric": "Validated hours saved per review cycle",
+    "calculation": "(Measured manual minutes - measured prototype minutes) × verified case volume; value hours using agreed loaded rate",
+    "assumptions": [
+      "No company baseline has been measured",
+      "No monetary or time saving is asserted"
+    ],
+    "estimated_value": null,
+    "evidence_level": "unknown"
+  },
+  "existing_tools_check": "Internal adoption and availability of similar tools have not been established; confirm before claiming a product gap.",
+  "confidence": "medium",
+  "sources": [
+    {
+      "url": "https://find-and-update.company-information.service.gov.uk/company/13634077",
+      "supports": "Public business identity or offering; does not verify internal tool gap",
+      "accessed_at": "2026-10-15"
+    }
+  ]
+}

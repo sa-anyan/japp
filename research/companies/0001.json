@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "company_id": 1,
+  "company": "Baraka Oil & Gas Ltd",
+  "research_status": "needs_verification",
+  "research_date": "2026-10-15",
+  "website": null,
+  "business_model": "Companies House lists wholesale agents; oil and gas trading not verified.",
+  "entry_level_fit": "Supplier quote comparison and reconciliation, conditional on validating actual trading activities.",
+  "current_workflow": "No internal process verified.",
+  "workflow_evidence": "unknown",
+  "opportunity": "Validate whether supplier quotations are routinely compared.",
+  "proposed_product": {
+    "name": "Quotation Comparison & Margin Checker",
+    "description": "Validate whether supplier quotations are routinely compared.",
+    "architecture": "Synthetic supplier quotations → Python unit and currency normalisation → comparison and margin report",
+    "mvp_scope": "Demonstration using synthetic data only; validate operational assumptions with company",
+    "build_effort": "few_prompts",
+    "existing_project_match": "Excel procurement dashboard and technoeconomic modelling",
+    "already_built": false
+  },
+  "impact_model": {
+    "metric": "Validated hours saved per review cycle",
+    "calculation": "(Measured manual minutes - measured prototype minutes) × verified case volume; value hours using agreed loaded rate",
+    "assumptions": [
+      "No company baseline has been measured",
+      "No monetary or time saving is asserted"
+    ],
+    "estimated_value": null,
+    "evidence_level": "unknown"
+  },
+  "existing_tools_check": "Internal adoption and availability of similar tools have not been established; confirm before claiming a product gap.",
+  "confidence": "low",
+  "sources": [
+    {
+      "url": "https://find-and-update.company-information.service.gov.uk/company/14327777",
+      "supports": "Public business identity or offering; does not verify internal tool gap",
+      "accessed_at": "2026-10-15"
+    }
+  ]
+}
