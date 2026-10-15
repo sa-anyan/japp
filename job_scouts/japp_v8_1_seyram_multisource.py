@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
 """
-JAPP v8.1 — UK multi-source job discovery pipeline.
+JAPP v8.1 — proven collector + Seyram's engineering relevance layer.
 
 Collector foundation:
-- python-jobspy for Indeed and LinkedIn
-- direct public-page adapters for Reed, Totaljobs, CV-Library and GOV.UK Find a Job
-- parser architecture informed by public open-source job-board projects
+- python-jobspy: Indeed, Glassdoor, Google Jobs (UK)
+- architecture inspired by Jmx097/Job-Scout-public
 
 JAPP adds:
-- broad single-keyword discovery across UK job sources
+- broad single-keyword discovery
+- UK-wide search
 - last-7-days collection
-- deduplication before classification
-- relevance filtering for energy, oil & gas, LNG, commodities, investment,
-  project economics, modelling and adjacent analytical roles
-- seniority and obvious unrelated-occupation rejection
-- relevant-jobs-only Excel output
-- optional debug workbook and per-keyword checkpointing
-- a lower, separately configurable LinkedIn result cap
+- Seyram-specific chemical/process/project/production engineering relevance filter
+- seniority / gas-engineer rejection
+- duplicate removal
+- raw + accepted + rejected audit sheets
+- checkpoint after every keyword
 
 This script does NOT automate applications and does NOT attempt to defeat
 CAPTCHAs or anti-bot challenges.
@@ -40,84 +38,79 @@ from jobspy import scrape_jobs
 
 
 DISCOVERY_TERMS = [
-    "analyst", "energy", "gas", "oil", "LNG", "petroleum",
-    "commodity", "commodities", "trading", "market", "investment",
-    "finance", "economics", "CAPEX", "OPEX", "techno-economic",
-    "modelling", "commercial", "infrastructure", "renewable",
-    "hydrogen", "carbon", "project", "reservoir", "upstream", "power",
-    "oil and gas",
+    "chemical", "process", "project", "production", "petroleum",
+    "energy", "manufacturing", "operations", "water", "engineer",
 ]
 
 # UK sources JobSpy supports well enough for this first integration.
 # ZipRecruiter is omitted because JobSpy documents it as US/Canada only.
 DEFAULT_SITES = ["indeed"]
 
-# Sector vocabulary. Used in context, not as an automatic pass.
+# Seyram target sectors. Broad enough to catch adjacent process industries.
 SECTOR = re.compile(
-    r"\b(energy|oil|gas|lng|petroleum|crude|refin(?:e|ery|ing)|commodity|commodities|"
-    r"electricity|renewable|solar|wind|hydrogen|carbon|decarbon|low.?carbon|"
-    r"energy transition|upstream|downstream|midstream|reservoir|subsurface|biofuel|"
-    r"emissions?|utilities|natural resources?|"
-    r"power market|power markets|power trading|power generation|power sector|"
-    r"power system|power systems|power infrastructure|power network|power networks|"
-    r"energy infrastructure)\b", re.I
+    r"\b(oil|gas|lng|petroleum|upstream|downstream|midstream|offshore|subsea|refin(?:e|ery|ing)|"
+    r"petrochemical|chemical|chemicals|energy|renewable|hydrogen|biofuel|sustainable aviation fuel|saf|"
+    r"manufactur(?:e|ing)|industrial|process industr(?:y|ies)|water|wastewater|utilities|"
+    r"pharmaceutical|bioprocess|food|beverage|power|carbon|decarbon|low.?carbon)\b", re.I
 )
 
-# Work Samuel actually wants to do.
+# Work Seyram actually wants to do.
 TARGET_WORK = re.compile(
-    r"\b(analyst|analysis|analytics|model(?:ling|ing)?|forecast(?:ing)?|economics?|"
-    r"economic evaluation|techno.?economic|valuation|investment|project finance|"
-    r"financial model(?:ling|ing)?|commercial analysis|market fundamentals?|"
-    r"supply.{0,8}demand|trading|trade operations|risk|exposure|capex|opex|"
-    r"feasibility|scenario|sensitivity|due diligence|asset analysis|project development|"
-    r"business planning|reservoir economics|field development|portfolio|strategy|"
-    r"commercial|project controls?|cost engineer(?:ing)?|cost analysis)\b", re.I
+    r"\b(chemical engineer(?:ing)?|process engineer(?:ing)?|project engineer(?:ing)?|"
+    r"production engineer(?:ing)?|production technolog(?:y|ist)|petroleum engineer(?:ing)?|"
+    r"operations engineer(?:ing)?|manufacturing engineer(?:ing)?|energy engineer(?:ing)?|"
+    r"water engineer(?:ing)?|wastewater|process development|process design|process optimisation|process optimization|"
+    r"production optimisation|production optimization|plant operations?|plant performance|asset performance|"
+    r"mass and energy balance|mass balance|energy balance|pfd|p&id|piping and instrumentation|"
+    r"process modelling|process modeling|prosper|gap model(?:ling|ing)?|artificial lift|well intervention|"
+    r"flow assurance|well performance|subsea|commissioning|start.?up|continuous improvement|"
+    r"troubleshoot(?:ing)?|root cause|process safety|hazop|hse|technical project delivery|"
+    r"capex|opex|feasibility|equipment performance|process control|production systems?)\b", re.I
 )
 
-# Strong phrases can qualify unusual titles when the actual work is clearly relevant.
+# Strong domain/work combinations help preserve unusual but genuinely relevant titles.
 STRONG_DOMAIN_WORK = re.compile(
-    r"\b("
-    r"(?:energy|oil|gas|lng|petroleum|commodity|commodities|electricity|renewable|hydrogen|carbon|"
-    r"upstream|downstream|midstream|reservoir|infrastructure).{0,45}"
-    r"(?:analysis|analytics|modelling|modeling|forecast|economics|valuation|investment|trading|"
-    r"risk|commercial|capex|opex|feasibility|project development|project finance|market)"
-    r"|"
-    r"(?:analysis|analytics|modelling|modeling|forecast|economics|valuation|investment|trading|"
-    r"risk|commercial|capex|opex|feasibility|project development|project finance|market).{0,45}"
-    r"(?:energy|oil|gas|lng|petroleum|commodity|commodities|electricity|renewable|hydrogen|carbon|"
-    r"upstream|downstream|midstream|reservoir|infrastructure)"
-    r")\b", re.I | re.S
+    r"\b(?:process|chemical|production|petroleum|manufacturing|operations|plant|water|wastewater|energy|"
+    r"oil|gas|lng|offshore|subsea|well|project).{0,55}"
+    r"(?:engineer|engineering|design|optimisation|optimization|operations|production|commissioning|"
+    r"modelling|modeling|performance|improvement|troubleshooting|hazop|safety|capex|feasibility)\b|"
+    r"\b(?:engineer|engineering|design|optimisation|optimization|operations|production|commissioning|"
+    r"modelling|modeling|performance|improvement|troubleshooting|hazop|safety|capex|feasibility).{0,55}"
+    r"(?:process|chemical|production|petroleum|manufacturing|plant|water|wastewater|energy|oil|gas|lng|offshore|subsea|well)\b",
+    re.I | re.S
 )
 
 TARGET_TITLE = re.compile(
-    r"\b(analyst|economist|commercial|trading|trader|investment|finance|financial|"
-    r"project development|development analyst|asset analyst|market|strategy|modelling|modeling|"
-    r"project controls|cost engineer|cost analyst|reservoir|subsurface|petroleum|upstream)\b", re.I
+    r"\b(chemical engineer|process engineer|project engineer|production engineer|production technologist|"
+    r"production technology engineer|petroleum engineer|operations engineer|manufacturing engineer|"
+    r"energy engineer|water engineer|wastewater engineer|process development engineer|plant engineer|"
+    r"facilities engineer|flow assurance engineer|process safety engineer|asset engineer|development engineer|"
+    r"continuous improvement engineer|technical engineer|graduate engineer|assistant engineer|junior engineer|"
+    r"well performance engineer)\b", re.I
 )
 
 ADJACENT_TITLE = re.compile(
-    r"\b(project engineer|process engineer|operations engineer|operations analyst|"
-    r"business analyst|data analyst|pricing analyst|graduate engineer|energy engineer)\b", re.I
+    r"\b(process technologist|production technologist|project coordinator|process specialist|production specialist|"
+    r"operations specialist|technical specialist|process analyst|production analyst|project officer|"
+    r"commissioning engineer|improvement engineer|reliability engineer|quality engineer)\b", re.I
 )
 
 SENIOR = re.compile(
     r"\b(senior|sr\.?|lead|principal|manager|director|head|vice president|vp|chief|partner)\b", re.I
 )
 
-# Explicitly unrelated occupation families observed in the V7 test workbook.
+# Explicitly unrelated occupation families. Avoid rejecting generic technician/service terms
+# where a process/manufacturing engineering context could still be relevant.
 UNRELATED_TITLE = re.compile(
-    r"\b(chef|cook|kitchen porter|porter|waiter|waitress|barista|reception(?:ist| supervisor)?|"
+    r"\b(chef|cook|kitchen porter|porter|waiter|waitress|barista|receptionist|"
     r"sales assistant|retail assistant|shop assistant|customer service assistant|"
     r"office administrator|administrator|admin assistant|general labourer|labourer|"
-    r"warehouse|driver|security officer|care assistant|support worker|nurse|teacher|"
-    r"software developer|software engineer|it support|helpdesk|diesel engineer|mechanic|"
-    r"commercial gas engineer|gas engineer|heating engineer|boiler engineer|service engineer|"
-    r"field service engineer|maintenance engineer|installation engineer|gas safe|plumber|"
-    r"plumbing|hvac|electrician|technician|"
-    r"gas trainer|responsible person|domain architect|sales specialist|sales consultant|"
-    r"account manager|business development manager)\b", re.I
+    r"warehouse operative|driver|security officer|care assistant|support worker|nurse|teacher|"
+    r"software developer|software engineer|it support|helpdesk|account manager|"
+    r"business development manager|sales consultant|sales specialist)\b", re.I
 )
 
+# Seyram is early-career. Reject vacancies that explicitly require 5+ years.
 EXPERIENCE_5PLUS = re.compile(
     r"\b(?:minimum\s+of\s+|at least\s+|minimum\s+)?([5-9]|1\d)\+?\s*(?:years?|yrs?)"
     r"(?:\s+of)?\s+(?:relevant\s+)?experience\b", re.I
@@ -762,7 +755,7 @@ def scrape_term(keyword, sites, results_per_site, hours_old):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="job_search_output_v8_1/japp_jobs.xlsx")
+    ap.add_argument("--out", default="job_scouts/outputs/seyram_v8_1/seyram_japp_jobs.xlsx")
     ap.add_argument("--keyword-limit", type=int, default=0)
     ap.add_argument("--results", type=int, default=50, help="Results wanted per non-LinkedIn source per keyword.")
     ap.add_argument("--days", type=int, default=7)
@@ -797,10 +790,10 @@ def main():
 
     done = {clean(x.get("Keyword")) for x in progress if clean(x.get("Status")) == "DONE"}
 
-    print(f"JAPP v8.1 | UK multi-source + tighter role filter | UK | last {args.days} days")
+    print(f"JAPP v8.1 SEYRAM | UK engineering search | UK | last {args.days} days")
     print(f"Sources: {', '.join(sites)}")
     print(f"Keywords this run: {len(terms)}")
-    print("UK BOARDS + JOBSPY -> DEDUPE -> CLASSIFY -> SAVE RELEVANT JOBS ONLY")
+    print("SEYRAM | UK BOARDS + JOBSPY -> DEDUPE -> SCRUTINISE JD -> SAVE RELEVANT JOBS ONLY")
     print()
 
     for keyword in terms:
@@ -974,7 +967,7 @@ def main():
         time.sleep(args.sleep)
 
     saved_relevant = len(dedupe(strong + possible))
-    print(f"\nComplete: {path}")
+    print(f"\nSEYRAM SEARCH COMPLETE: {path}")
     print(f"Relevant jobs saved to Excel: {saved_relevant}")
     print(f"Strong matches: {len(dedupe(strong))}")
     print(f"Possible matches: {len(dedupe(possible))}")

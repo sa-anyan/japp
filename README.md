@@ -2,6 +2,20 @@
 
 JAPP is a Python automation I built to handle the repetitive administration that follows an AI-assisted job application workflow. After tailored CVs, cover letters and job descriptions land in Downloads, JAPP identifies them, extracts the company and role from their filenames, matches related documents, organises them into a structured application archive, and automatically updates an Excel application tracker.
 
+## Project structure
+
+- `main.py` is reserved for the upcoming application.
+- `job_scouts/` contains the job-board scouts and their generated output location.
+- `organizer/` contains the Downloads application organizer and its configuration template.
+- `japp_hiring_intelligence.py` tracks public hiring leads and outreach.
+- `data/reference/` is for local reference data and is excluded from Git.
+- `docs/commands/` contains scout run instructions.
+- `requirements.txt` lists the Python dependencies.
+
+The organizer reads optional local settings from `organizer/settings.json`. This file is ignored by Git; start from `organizer/settings.example.json` and set your own filename tokens and archive folder.
+
+Install dependencies with `.venv/bin/python -m pip install -r requirements.txt`. Run commands from the project root.
+
 ## Workflow
 
 ```text
@@ -95,7 +109,7 @@ Active development.
 
 ## Job discovery — V8.1
 
-JAPP also includes a UK job-discovery pipeline in `japp_v8_1_multisource.py`.
+JAPP also includes a UK job-discovery pipeline in `job_scouts/japp_v8_1_multisource.py`.
 
 The discovery workflow uses broad search terms to find vacancies quickly, deduplicates results, removes obvious unrelated or senior roles, and saves only the relevant shortlist for manual review.
 
@@ -123,7 +137,7 @@ Relevant-jobs-only Excel shortlist
 Manual JD review / CV tailoring / application
 ```
 
-See `JAPP_V8.1_Bash_Commands.txt` for first-run and recurring commands.
+See `docs/commands/job_scouts.md` and `docs/commands/seyram_job_scouts.md` for first-run and recurring commands.
 
 
 ## Hiring Intelligence — hiring posts and direct outreach leads
@@ -150,8 +164,8 @@ From the cloned `japp` folder:
 
 ```bash
 git pull origin main
-python3 -m pip install -r requirements.txt
-python3 japp_hiring_intelligence.py --print-queries
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python japp_hiring_intelligence.py --print-queries
 ```
 
 The last command prints targeted searches with browser links so you can find

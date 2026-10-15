@@ -5,24 +5,26 @@ __pycache__/
 venv/
 env/
 
-# IDE
+# IDE and local browser state
 .idea/
 .vscode/
+.japp-browser-profile/
 
 # macOS
 .DS_Store
 
-# Application documents and private data
+# Personal documents and local data
 *.docx
 *.pdf
 *.xlsx
 *.xls
 ~$*
-
-# Local application archive
 JAPPS/
 japps/
+data/reference/
 
-# Environment / secrets
+# Generated and local configuration
+job_scouts/outputs/
+organizer/settings.json
 .env
 .env.*
