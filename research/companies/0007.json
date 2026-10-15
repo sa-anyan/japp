@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "company_id": 7,
+  "company": "SIMPLY ENERGY SOLUTIONS LIMITED",
+  "research_status": "researched",
+  "research_date": "2026-10-15",
+  "website": "https://ww3.simplyenergysolution.co.uk/about-us/",
+  "business_model": "Commercial energy consultancy helping SMEs compare utility market prices; revenue mechanism not disclosed.",
+  "entry_level_fit": "Compare tariff offers, bills and price-risk scenarios.",
+  "current_workflow": "The website describes utility price comparison and customer support; internal software is unknown.",
+  "workflow_evidence": "public_business_activity_only",
+  "opportunity": "Improve repeatability of quote comparison and client explanations, not replicate its core service.",
+  "proposed_product": {
+    "name": "SME Tariff Comparison Explainer",
+    "description": "Improve repeatability of quote comparison and client explanations, not replicate its core service.",
+    "architecture": "Supplier quote and usage inputs → tariff rules → annual bill comparisons → client PDF",
+    "mvp_scope": "Demonstration using synthetic data only; validate operational assumptions with company",
+    "build_effort": "few_prompts",
+    "existing_project_match": "Energy-market Python analysis and project finance modelling",
+    "already_built": false
+  },
+  "impact_model": {
+    "metric": "Validated hours saved per review cycle",
+    "calculation": "(Measured manual minutes - measured prototype minutes) × verified case volume; value hours using agreed loaded rate",
+    "assumptions": [
+      "No company baseline has been measured",
+      "No monetary or time saving is asserted"
+    ],
+    "estimated_value": null,
+    "evidence_level": "unknown"
+  },
+  "existing_tools_check": "Internal adoption and availability of similar tools have not been established; confirm before claiming a product gap.",
+  "confidence": "high",
+  "sources": [
+    {
+      "url": "https://ww3.simplyenergysolution.co.uk/about-us/",
+      "supports": "Public business identity or offering; does not verify internal tool gap",
+      "accessed_at": "2026-10-15"
+    }
+  ]
+}

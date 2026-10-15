@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "company_id": 9,
+  "company": "London Borough of Bexley",
+  "research_status": "researched",
+  "research_date": "2026-10-15",
+  "website": "https://www.bexley.gov.uk/about-the-council/strategies-plans-and-policies/climate-change-statement-and-action-plan-2022/welcome-bexley-climate-statement",
+  "business_model": "Local authority financed through taxation, grants and service fees; maintains climate planning and services.",
+  "entry_level_fit": "Support emissions KPI monitoring, climate action reporting and business cases.",
+  "current_workflow": "Publishes a climate action plan and progress information; internal tracking stack unknown.",
+  "workflow_evidence": "public_business_activity_only",
+  "opportunity": "Improve traceability and freshness of climate action evidence.",
+  "proposed_product": {
+    "name": "Climate Action Evidence Tracker",
+    "description": "Improve traceability and freshness of climate action evidence.",
+    "architecture": "Synthetic action register → KPI and evidence link checks → exception dashboard and quarterly report",
+    "mvp_scope": "Demonstration using synthetic data only; validate operational assumptions with company",
+    "build_effort": "few_prompts",
+    "existing_project_match": "Power BI reporting, electricity markets and technoeconomic analysis",
+    "already_built": false
+  },
+  "impact_model": {
+    "metric": "Validated hours saved per review cycle",
+    "calculation": "(Measured manual minutes - measured prototype minutes) × verified case volume; value hours using agreed loaded rate",
+    "assumptions": [
+      "No company baseline has been measured",
+      "No monetary or time saving is asserted"
+    ],
+    "estimated_value": null,
+    "evidence_level": "unknown"
+  },
+  "existing_tools_check": "Internal adoption and availability of similar tools have not been established; confirm before claiming a product gap.",
+  "confidence": "high",
+  "sources": [
+    {
+      "url": "https://www.bexley.gov.uk/about-the-council/strategies-plans-and-policies/climate-change-statement-and-action-plan-2022/welcome-bexley-climate-statement",
+      "supports": "Public business identity or offering; does not verify internal tool gap",
+      "accessed_at": "2026-10-15"
+    }
+  ]
+}

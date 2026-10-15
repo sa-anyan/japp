@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "company_id": 5,
+  "company": "London Borough of Barking & Dagenham",
+  "research_status": "researched",
+  "research_date": "2026-10-15",
+  "website": "https://lbbd.moderngov.co.uk/ieDecisionDetails.aspx?Id=4183",
+  "business_model": "Local council funded through taxes, grants, rates and service fees; delivers public services and climate programmes.",
+  "entry_level_fit": "Support carbon baselines, investment evaluation and council project performance.",
+  "current_workflow": "Public climate and net-zero programme documents exist; internal scoring tools unknown.",
+  "workflow_evidence": "public_business_activity_only",
+  "opportunity": "Compare prospective net-zero interventions transparently using cost and emissions impact.",
+  "proposed_product": {
+    "name": "Net-Zero Intervention Prioritiser",
+    "description": "Compare prospective net-zero interventions transparently using cost and emissions impact.",
+    "architecture": "Synthetic intervention register → carbon and cost assumptions → prioritised scenarios → dashboard",
+    "mvp_scope": "Demonstration using synthetic data only; validate operational assumptions with company",
+    "build_effort": "few_prompts",
+    "existing_project_match": "DCF, scenario modelling and analytical dashboards",
+    "already_built": false
+  },
+  "impact_model": {
+    "metric": "Validated hours saved per review cycle",
+    "calculation": "(Measured manual minutes - measured prototype minutes) × verified case volume; value hours using agreed loaded rate",
+    "assumptions": [
+      "No company baseline has been measured",
+      "No monetary or time saving is asserted"
+    ],
+    "estimated_value": null,
+    "evidence_level": "unknown"
+  },
+  "existing_tools_check": "Internal adoption and availability of similar tools have not been established; confirm before claiming a product gap.",
+  "confidence": "medium",
+  "sources": [
+    {
+      "url": "https://lbbd.moderngov.co.uk/ieDecisionDetails.aspx?Id=4183",
+      "supports": "Public business identity or offering; does not verify internal tool gap",
+      "accessed_at": "2026-10-15"
+    }
+  ]
+}
