@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "company_id": 2,
+  "company": "Capital Energy Group Ltd",
+  "research_status": "researched",
+  "research_date": "2026-10-15",
+  "website": "https://capital-energy.co.uk/",
+  "business_model": "Provides solar PV, batteries, heat pumps, insulation, boiler and EV charging installation services; customer projects and relevant grants may fund work.",
+  "entry_level_fit": "Evaluate retrofit options, project payback and supplier estimates.",
+  "current_workflow": "Publicly offers assessment, recommendations and installations; internal calculation tools unknown.",
+  "workflow_evidence": "public_business_activity_only",
+  "opportunity": "Improve consistency and transparency of retrofit scenario comparisons.",
+  "proposed_product": {
+    "name": "Retrofit Option Economics Comparator",
+    "description": "Improve consistency and transparency of retrofit scenario comparisons.",
+    "architecture": "Usage, tariff and quote inputs → engineering scenario model → NPV/payback sensitivities → PDF/Streamlit report",
+    "mvp_scope": "Demonstration using synthetic data only; validate operational assumptions with company",
+    "build_effort": "few_prompts",
+    "existing_project_match": "Protein-from-Air DCF model and energy scenario dashboards",
+    "already_built": false
+  },
+  "impact_model": {
+    "metric": "Validated hours saved per review cycle",
+    "calculation": "(Measured manual minutes - measured prototype minutes) × verified case volume; value hours using agreed loaded rate",
+    "assumptions": [
+      "No company baseline has been measured",
+      "No monetary or time saving is asserted"
+    ],
+    "estimated_value": null,
+    "evidence_level": "unknown"
+  },
+  "existing_tools_check": "Internal adoption and availability of similar tools have not been established; confirm before claiming a product gap.",
+  "confidence": "high",
+  "sources": [
+    {
+      "url": "https://capital-energy.co.uk/",
+      "supports": "Public business identity or offering; does not verify internal tool gap",
+      "accessed_at": "2026-10-15"
+    }
+  ]
+}
