@@ -26,5 +26,11 @@ data/reference/
 # Generated and local configuration
 job_scouts/outputs/
 organizer/settings.json
+backups/
+outputs/
+logs/
+*.sqlite
+*.sync.json
+STOP
 .env
 .env.*
