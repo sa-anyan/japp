@@ -1,17 +1,27 @@
-name: Hiring Intelligence tests
+name: JAPP tests
 
 on:
   push:
     paths:
       - 'japp_hiring_intelligence.py'
       - 'hiring_intelligence_config.json'
-      - 'tests/test_hiring_intelligence.py'
+      - 'automation/**/*.py'
+      - 'main.py'
+      - 'requirements.txt'
+      - 'requirements-dev.txt'
+      - 'tests/**'
+      - 'docs/commands/automation.md'
       - '.github/workflows/hiring_intelligence_tests.yml'
   pull_request:
     paths:
       - 'japp_hiring_intelligence.py'
       - 'hiring_intelligence_config.json'
-      - 'tests/test_hiring_intelligence.py'
+      - 'automation/**/*.py'
+      - 'main.py'
+      - 'requirements.txt'
+      - 'requirements-dev.txt'
+      - 'tests/**'
+      - 'docs/commands/automation.md'
       - '.github/workflows/hiring_intelligence_tests.yml'
 
 jobs:
@@ -22,5 +32,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: python -m pip install 'openpyxl>=3.1'
-      - run: python -m unittest discover -s tests -p 'test_hiring_intelligence.py' -v
+      - run: python -m pip install -r requirements.txt -r requirements-dev.txt
+      - run: python -m pytest -q
