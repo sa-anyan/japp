@@ -35,5 +35,9 @@ data/state/
 *.sqlite
 *.sync.json
 STOP
+.japp.lock
+.cache/
+automation/imports/
+automation/config.json
 .env
 .env.*

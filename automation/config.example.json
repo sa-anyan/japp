@@ -1,0 +1,62 @@
+{
+  "research": {
+    "pull_before_sync": false,
+    "remote": "origin",
+    "branch": "main"
+  },
+  "paths": {
+    "workbook": "data/reference/JAPP_Automation_Dashboard.xlsx",
+    "research_dir": "research/companies",
+    "registry": "data/reference/JAPP_company_registry.csv",
+    "manifest": "data/state/research-sync.json",
+    "database": "data/state/japp.sqlite",
+    "backup_dir": "backups",
+    "generated_dir": "data/generated",
+    "contacts_dir": "data/contacts",
+    "apollo_import_dir": "automation/imports/apollo",
+    "logs_dir": "logs",
+    "prompts_dir": "prompts",
+    "master_cv": "",
+    "profile_dir": ".japp-browser-profile",
+    "stop_file": "STOP",
+    "lock_file": ".japp.lock"
+  },
+  "polling": {
+    "research_sync_seconds": 3600,
+    "approval_seconds": 30,
+    "handoff_seconds": 30,
+    "contact_import_seconds": 60,
+    "batch_seconds": 30
+  },
+  "execution": {
+    "enabled": true,
+    "max_companies_per_day": 15,
+    "min_step_pause_seconds": 20,
+    "max_step_pause_seconds": 60,
+    "min_company_pause_seconds": 180,
+    "max_company_pause_seconds": 480,
+    "target_titles": ["Hiring Manager", "Department Head", "Commercial Director", "Talent Acquisition"]
+  },
+  "ai": {"provider": "manual"},
+  "apollo": {"provider": "csv", "reveal_emails": false, "max_reveals_per_run": 0},
+  "mail": {
+    "provider": "mock",
+    "auto_draft": false,
+    "send_enabled": false,
+    "auto_send_approved_batches": false,
+    "daily_send_limit": 20,
+    "min_send_pause_seconds": 20,
+    "max_send_pause_seconds": 60,
+    "subject_template": "Introduction: {company}",
+    "outlook": {
+      "tenant": "common",
+      "client_id_env": "JAPP_MICROSOFT_CLIENT_ID",
+      "scopes": ["Mail.ReadWrite", "Mail.Send", "User.Read", "offline_access"]
+    },
+    "gmail": {
+      "client_id_env": "JAPP_GOOGLE_CLIENT_ID",
+      "client_secret_env": "JAPP_GOOGLE_CLIENT_SECRET",
+      "scopes": ["https://www.googleapis.com/auth/gmail.compose", "https://www.googleapis.com/auth/gmail.send"]
+    }
+  }
+}

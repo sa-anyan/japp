@@ -27,6 +27,11 @@ def make_workbook(path: Path, *, target_rows=False) -> None:
     )
     validation.add("D2:D20")
     execution.add_data_validation(validation)
+    tailoring_validation = DataValidation(
+        type="list", formula1='"Start,Done,Not required"', allow_blank=True
+    )
+    tailoring_validation.add("E2:E20")
+    execution.add_data_validation(tailoring_validation)
     execution.column_dimensions["C"].width = 42
 
     if target_rows:
@@ -78,7 +83,9 @@ def test_adds_rows_preserves_validation_and_is_idempotent(tmp_path):
     make_workbook(workbook_path)
     write_research(research_dir)
 
-    first = run_sync(research_dir, workbook_path, backup_dir=tmp_path / "backups")
+    first = run_sync(
+        research_dir, workbook_path, backup_dir=tmp_path / "backups", source_commit="remote-sha"
+    )
     assert first["added"] == 1
     workbook = load_workbook(workbook_path)
     research = workbook["02 Research"]
@@ -97,9 +104,11 @@ def test_adds_rows_preserves_validation_and_is_idempotent(tmp_path):
     provenance = manifest["records"]["2"]
     assert provenance["file"] == "2.json"
     assert len(provenance["sha256"]) == 64
-    assert provenance["git_commit"]
+    assert provenance["git_commit"] == "remote-sha"
 
-    second = run_sync(research_dir, workbook_path, backup_dir=tmp_path / "backups")
+    second = run_sync(
+        research_dir, workbook_path, backup_dir=tmp_path / "backups", source_commit="remote-sha"
+    )
     assert second["added"] == second["updated"] == 0
     assert second["skipped"] == 1
     assert len(list((tmp_path / "backups").glob("*.xlsx"))) == 1
@@ -179,6 +188,28 @@ def test_company_name_mismatch_is_skipped_by_id(tmp_path):
     assert workbook_path.read_bytes() == original
 
 
+def test_blank_workbook_company_uses_registry_for_identity_validation(tmp_path):
+    workbook_path = tmp_path / "dashboard.xlsx"
+    research_dir = tmp_path / "research"
+    registry_path = tmp_path / "registry.csv"
+    make_workbook(workbook_path)
+    workbook = load_workbook(workbook_path)
+    workbook["01 Companies"]["B2"] = None
+    workbook.save(workbook_path)
+    write_research(research_dir)
+    registry_path.write_text(
+        "id,company,town,sector\n2,Capital Energy Group Ltd,London,Energy\n",
+        encoding="utf-8",
+    )
+
+    result = run_sync(
+        research_dir, workbook_path, registry_path=registry_path, dry_run=True
+    )
+
+    assert result["added"] == 1
+    assert result["skipped"] == result["malformed"] == 0
+
+
 def test_changed_owned_value_sets_needs_review_and_creates_backup(tmp_path):
     workbook_path = tmp_path / "dashboard.xlsx"
     research_dir = tmp_path / "research"
@@ -198,3 +229,70 @@ def test_changed_owned_value_sets_needs_review_and_creates_backup(tmp_path):
     assert workbook["03 Execution"]["D2"].value == "Pending Review"
     assert Path(result["backup_path"]).is_file()
     workbook.close()
+
+
+def test_appended_rows_copy_extra_formulas_and_extend_both_validations(tmp_path):
+    workbook_path = tmp_path / "dashboard.xlsx"
+    research_dir = tmp_path / "research"
+    make_workbook(workbook_path, target_rows=True)
+    workbook = load_workbook(workbook_path)
+    workbook["01 Companies"].append([3, "Another Energy Ltd", "London", "Energy"])
+    workbook["02 Research"]["H2"] = "=A2+1"
+    workbook["03 Execution"]["F2"] = "=A2+1"
+    workbook["03 Execution"].data_validations.dataValidation[0].sqref = "D2:D2"
+    workbook["03 Execution"].data_validations.dataValidation[1].sqref = "E2:E2"
+    workbook.save(workbook_path)
+    write_research(research_dir, company_id=3, company="Another Energy Ltd")
+    manifest_path = workbook_path.with_suffix(".sync.json")
+    manifest_path.write_text(json.dumps({"version": 1, "cells": {}, "records": {}}), encoding="utf-8")
+
+    result = run_sync(
+        research_dir,
+        workbook_path,
+        manifest_path=manifest_path,
+        backup_dir=tmp_path / "backups",
+    )
+
+    assert result["added"] == 1
+    workbook = load_workbook(workbook_path, data_only=False)
+    assert workbook["02 Research"]["H3"].value == "=A3+1"
+    assert workbook["03 Execution"]["F3"].value == "=A3+1"
+    validations = [str(validation.sqref) for validation in workbook["03 Execution"].data_validations.dataValidation]
+    assert "D3" in validations[0]
+    assert "E3" in validations[1]
+    workbook.close()
+
+
+def test_manifest_only_change_does_not_replace_or_backup_workbook(tmp_path):
+    workbook_path = tmp_path / "dashboard.xlsx"
+    research_dir = tmp_path / "research"
+    make_workbook(workbook_path, target_rows=True)
+    write_research(research_dir)
+    workbook = load_workbook(workbook_path)
+    research = workbook["02 Research"]
+    execution = workbook["03 Execution"]
+    for cell, value in {
+        "C2": "Manual idea", "D2": "Manual business", "E2": "Manual fit",
+        "F2": "Manual workflow", "G2": "Manual opportunity",
+    }.items():
+        research[cell] = value
+    execution["C2"] = "Manual SaaS idea"
+    execution["D2"] = "Pending Review"
+    execution["E2"] = "Start"
+    workbook.save(workbook_path)
+    workbook.close()
+    manifest_path = workbook_path.with_suffix(".sync.json")
+    manifest_path.write_text(json.dumps({
+        "version": 1,
+        "cells": {},
+        "records": {"2": {"file": "2.json", "sha256": "old-hash", "git_commit": "old-commit"}},
+    }), encoding="utf-8")
+    original_workbook = workbook_path.read_bytes()
+
+    result = run_sync(research_dir, workbook_path, manifest_path=manifest_path,
+                      backup_dir=tmp_path / "backups")
+
+    assert result["updated"] == 1
+    assert workbook_path.read_bytes() == original_workbook
+    assert not (tmp_path / "backups").exists()
+    assert json.loads(manifest_path.read_text(encoding="utf-8"))["records"]["2"]["sha256"] != "old-hash"

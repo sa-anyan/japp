@@ -4,17 +4,43 @@ JAPP is a Python automation I built to handle the repetitive administration that
 
 ## Project structure
 
-- `main.py` is reserved for the upcoming application.
+- `main.py` is the master CLI entry point.
+- `automation/` contains sync, approvals, workflow state, document handoff, contacts, providers, and orchestration.
+- `research/companies/` contains versioned company research JSON records.
 - `job_scouts/` contains the job-board scouts and their generated output location.
 - `organizer/` contains the Downloads application organizer and its configuration template.
 - `japp_hiring_intelligence.py` tracks public hiring leads and outreach.
-- `data/reference/` is for local reference data and is excluded from Git.
+- `data/reference/` contains local Excel/reference data and is excluded from Git.
+- `prompts/` contains user-owned prompt placeholders; JAPP does not invent prompt content.
 - `docs/commands/` contains scout run instructions.
 - `requirements.txt` lists the Python dependencies.
 
 The organizer reads optional local settings from `organizer/settings.json`. This file is ignored by Git; start from `organizer/settings.example.json` and set your own filename tokens and archive folder.
 
 Install dependencies with `.venv/bin/python -m pip install -r requirements.txt`. Run commands from the project root.
+
+## Master automation engine
+
+JAPP is Python-first, with Excel as the approval interface, SQLite for resumable workflow state, GitHub-tracked JSON as research input, and APScheduler for local monitoring. Integrations use replaceable providers. Defaults are intentionally non-live: AI uses an attended handoff, Apollo uses CSV import, mail uses a mock provider, and sending/automatic drafting are disabled.
+
+```sh
+.venv/bin/python main.py doctor
+.venv/bin/python main.py sync --dry-run
+.venv/bin/python main.py run --approved-only --dry-run
+.venv/bin/python main.py start
+.venv/bin/python main.py stop
+.venv/bin/python main.py status
+```
+
+The production workbook is configured at `data/reference/JAPP_Automation_Dashboard.xlsx`. Research sync matches both company ID and name, fills only blank or previously script-owned cells, and never changes `01 Companies` or the user approval fields. Set `research.pull_before_sync` in the ignored `automation/config.json` only if you want the guarded GitHub pull enabled; it refuses to pull when local research files have edits.
+
+Only records with `03 Execution` Status `Approved` and CV Tailoring `Start` enter the queue. CV/proposal prompts remain placeholders until you provide them. JAPP does not automate ChatGPT Plus; it prepares a company package for attended handoff and validates returned DOCX files.
+
+Set `paths.master_cv` in local config before CV preparation; the package remains waiting for user inputs while the file is missing.
+
+Apollo contact files are imported with `contacts import-csv`. Email drafts are built into an immutable review batch with `batch create`, `batch draft <id>`, and `batch approve <id>`. Use `batch cancel <id>` to delete unsent provider drafts before replacing changed content and requesting fresh approval. Delivery requires a separately configured provider, `mail.send_enabled: true`, `--send`, and an approved batch. No real account calls or messages are made by the test suite.
+
+See [docs/commands/automation.md](docs/commands/automation.md) for setup, commands, and provider limitations.
 
 ## Workflow
 

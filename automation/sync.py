@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import hashlib
+import csv
 import json
 import os
 import re
 import shutil
 import subprocess
 import tempfile
+from copy import copy
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -182,6 +184,25 @@ def _id_index(sheet, cached_sheet, id_column: int) -> dict[str, int]:
     return result
 
 
+def _load_company_registry(path: Path) -> dict[str, str]:
+    if not path.is_file():
+        return {}
+    registry = {}
+    with path.open("r", encoding="utf-8-sig", newline="") as source:
+        reader = csv.DictReader(source)
+        if not reader.fieldnames or not {"id", "company"}.issubset(reader.fieldnames):
+            raise ValueError(f"Company registry must contain id and company columns: {path}")
+        for row in reader:
+            company_id = normalize_id(row.get("id"))
+            company = row.get("company", "").strip()
+            if company_id is None or not company:
+                continue
+            if company_id in registry:
+                raise ValueError(f"Duplicate company_id {company_id} in registry {path}")
+            registry[company_id] = company
+    return registry
+
+
 def _load_manifest(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {"version": 1, "cells": {}, "records": {}}
@@ -230,7 +251,7 @@ def _append_row(sheet, template_row: int | None, mapped_columns: set[int]) -> in
         source = sheet.cell(template_row, column)
         target = sheet.cell(row, column)
         if source.has_style:
-            target._style = source._style.copy()
+            target._style = copy(source._style)
         if column not in mapped_columns and _is_formula(source):
             target.value = Translator(source.value, origin=source.coordinate).translate_formula(
                 target.coordinate
@@ -244,15 +265,15 @@ def _append_row(sheet, template_row: int | None, mapped_columns: set[int]) -> in
     return row
 
 
-def _extend_status_validation(sheet, row: int, status_column: int) -> None:
-    reference = f"{get_column_letter(status_column)}{row}"
+def _extend_validation_for_column(sheet, row: int, column: int) -> None:
+    reference = f"{get_column_letter(column)}{row}"
     for validation in sheet.data_validations.dataValidation:
         ranges = list(validation.sqref.ranges)
         applies_to_status = any(
-            cell_range.min_col <= status_column <= cell_range.max_col for cell_range in ranges
+            cell_range.min_col <= column <= cell_range.max_col for cell_range in ranges
         )
         already_covers_row = any(
-            cell_range.min_col <= status_column <= cell_range.max_col
+            cell_range.min_col <= column <= cell_range.max_col
             and cell_range.min_row <= row <= cell_range.max_row
             for cell_range in ranges
         )
@@ -317,20 +338,46 @@ def _save_atomically(workbook, workbook_path: Path, manifest_path: Path,
     return backup_path
 
 
+def _save_manifest_atomically(manifest_path: Path, manifest: dict[str, Any]) -> None:
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", prefix=f".{manifest_path.name}-",
+            suffix=".tmp", dir=manifest_path.parent, delete=False,
+        ) as temp:
+            temporary = Path(temp.name)
+            json.dump(manifest, temp, indent=2, sort_keys=True)
+            temp.write("\n")
+        os.replace(temporary, manifest_path)
+        temporary = None
+    finally:
+        if temporary:
+            temporary.unlink(missing_ok=True)
+
+
 def run_sync(research_dir: Path, workbook_path: Path, manifest_path: Path | None = None,
-             backup_dir: Path = Path("backups"), dry_run: bool = False) -> dict[str, Any]:
+             backup_dir: Path = Path("backups"), dry_run: bool = False,
+             registry_path: Path | None = None,
+             source_commit: str | None = None) -> dict[str, Any]:
     research_dir = Path(research_dir).expanduser()
     workbook_path = Path(workbook_path).expanduser()
     manifest_path = Path(manifest_path).expanduser() if manifest_path else workbook_path.with_suffix(".sync.json")
     backup_dir = Path(backup_dir).expanduser()
+    registry_path = (
+        Path(registry_path).expanduser()
+        if registry_path
+        else workbook_path.with_name("JAPP_company_registry.csv")
+    )
     if not workbook_path.is_file():
         raise FileNotFoundError(f"Workbook not found: {workbook_path}")
 
     records, messages = _load_records(research_dir)
+    registry_names = _load_company_registry(registry_path)
     manifest = _load_manifest(manifest_path)
     manifest_cells = manifest["cells"]
     manifest_records = manifest["records"]
-    repository_commit = _repository_commit()
+    repository_commit = source_commit or _repository_commit()
     workbook = load_workbook(workbook_path)
     cached_workbook = load_workbook(workbook_path, data_only=True)
     result = {
@@ -361,7 +408,13 @@ def run_sync(research_dir: Path, workbook_path: Path, manifest_path: Path | None
         research_ids = _id_index(research, cached_research, research_columns["ID Number"])
         execution_ids = _id_index(execution, cached_execution, execution_columns["ID Number"])
 
-        research_mapped_columns = set(research_columns.values())
+        research_mapped_columns = {
+            research_columns[name]
+            for name in (
+                "ID Number", "Company", "Business Idea", "How They Make Money",
+                "How I Could Fit", "Current Workflow", "SaaS / AI Improvement Opportunity",
+            )
+        }
         execution_mapped_columns = {
             execution_columns[name] for name in ("ID Number", "Company", "SaaS Idea", "Status")
         }
@@ -380,10 +433,19 @@ def run_sync(research_dir: Path, workbook_path: Path, manifest_path: Path | None
             registry_name = _cell_value(
                 companies, cached_companies, registry_row, company_columns["Company"]
             )
+            if not isinstance(registry_name, str) or not registry_name.strip():
+                registry_name = registry_names.get(company_id)
+            elif company_id in registry_names and normalize_company_name(registry_name) != normalize_company_name(
+                registry_names[company_id]
+            ):
+                result["skipped"] += 1
+                result["messages"].append(
+                    f"Skipped {record['path'].name}: workbook and registry names disagree for ID {company_id}"
+                )
+                continue
             if (
                 not isinstance(registry_name, str)
-                or normalize_company_name(registry_name)
-                != normalize_company_name(record["company"])
+                or normalize_company_name(registry_name) != normalize_company_name(record["company"])
             ):
                 result["skipped"] += 1
                 result["messages"].append(
@@ -415,7 +477,10 @@ def run_sync(research_dir: Path, workbook_path: Path, manifest_path: Path | None
                 template = max(execution_ids.values(), default=execution.max_row or 1)
                 execution_row = _append_row(execution, template, execution_mapped_columns)
                 execution_ids[company_id] = execution_row
-                _extend_status_validation(execution, execution_row, execution_columns["Status"])
+                _extend_validation_for_column(execution, execution_row, execution_columns["Status"])
+                _extend_validation_for_column(
+                    execution, execution_row, execution_columns["CV Tailoring"]
+                )
 
             research_values = {
                 "ID Number": record["company_value"],
@@ -445,10 +510,11 @@ def run_sync(research_dir: Path, workbook_path: Path, manifest_path: Path | None
                     "Pending Review", manifest_cells
                 )
 
-            changed = bool(
-                research_added or execution_added or research_writes or execution_writes or source_changed
+            workbook_changed = bool(
+                research_added or execution_added or research_writes or execution_writes
             )
-            wrote_any = wrote_any or changed
+            changed = workbook_changed or source_changed
+            wrote_any = wrote_any or workbook_changed
             if research_added or execution_added:
                 result["added"] += 1
             elif changed:
@@ -460,9 +526,12 @@ def run_sync(research_dir: Path, workbook_path: Path, manifest_path: Path | None
             result["messages"].append(f"No research JSON files found in {research_dir}")
 
         if (wrote_any or manifest_changed) and not dry_run:
-            result["backup_path"] = str(
-                _save_atomically(workbook, workbook_path, manifest_path, manifest, backup_dir)
-            )
+            if wrote_any:
+                result["backup_path"] = str(
+                    _save_atomically(workbook, workbook_path, manifest_path, manifest, backup_dir)
+                )
+            else:
+                _save_manifest_atomically(manifest_path, manifest)
     finally:
         workbook.close()
         cached_workbook.close()
