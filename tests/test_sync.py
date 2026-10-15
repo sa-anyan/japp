@@ -17,20 +17,20 @@ def make_workbook(path: Path, *, target_rows=False) -> None:
 
     research = workbook.create_sheet("02 Research")
     research.append([
-        "ID Number", "Company", "How They Make Money", "How I Could Fit",
-        "Current Workflow", "SaaS / AI Improvement Opportunity",
+        "ID Number", "Company", "Business Idea", "How They Make Money",
+        "How I Could Fit", "Current Workflow", "SaaS / AI Improvement Opportunity",
     ])
     execution = workbook.create_sheet("03 Execution")
     execution.append(["ID Number", "Company", "SaaS Idea", "Status", "CV Tailoring"])
     validation = DataValidation(
-        type="list", formula1='"needs_review,approved,rejected"', allow_blank=True
+        type="list", formula1='"Pending Review,Approved,Rejected"', allow_blank=True
     )
     validation.add("D2:D20")
     execution.add_data_validation(validation)
     execution.column_dimensions["C"].width = 42
 
     if target_rows:
-        research.append([2, "Capital Energy Group Ltd", None, None, None, None])
+        research.append([2, "Capital Energy Group Ltd", None, None, None, None, None])
         execution.append([2, "Capital Energy Group Ltd", None, None, None])
         research["A2"].font = Font(bold=True)
 
@@ -83,17 +83,21 @@ def test_adds_rows_preserves_validation_and_is_idempotent(tmp_path):
     workbook = load_workbook(workbook_path)
     research = workbook["02 Research"]
     execution = workbook["03 Execution"]
-    assert research["C2"].value == "Recurring energy services"
-    assert research["F2"].value == (
-        "Automate comparison work.\n\n"
-        "Workflow Comparator\nCompares retrofit options."
-    )
+    assert research["C2"].value == "Automate comparison work."
+    assert research["D2"].value == "Recurring energy services"
+    assert research["G2"].value == "Workflow Comparator\n\nCompares retrofit options."
     assert execution["C2"].value == "Workflow Comparator\nCompares retrofit options."
-    assert execution["D2"].value == "needs_review"
+    assert execution["D2"].value == "Pending Review"
     assert execution["E2"].value is None
     assert execution.column_dimensions["C"].width == 42
     assert any("D2" in str(validation.sqref) for validation in execution.data_validations.dataValidation)
     workbook.close()
+
+    manifest = json.loads(workbook_path.with_suffix(".sync.json").read_text(encoding="utf-8"))
+    provenance = manifest["records"]["2"]
+    assert provenance["file"] == "2.json"
+    assert len(provenance["sha256"]) == 64
+    assert provenance["git_commit"]
 
     second = run_sync(research_dir, workbook_path, backup_dir=tmp_path / "backups")
     assert second["added"] == second["updated"] == 0
@@ -109,16 +113,16 @@ def test_updates_owned_cells_but_preserves_manual_values_and_formulas(tmp_path):
     workbook = load_workbook(workbook_path)
     research = workbook["02 Research"]
     execution = workbook["03 Execution"]
-    research["C2"] = "Manual edit"
-    research["D2"] = "=1+1"
-    execution["D2"] = "approved"
-    execution["E2"] = "start"
+    research["D2"] = "Manual edit"
+    research["E2"] = "=1+1"
+    execution["D2"] = "Approved"
+    execution["E2"] = "Start"
     workbook.save(workbook_path)
 
     manifest_path = workbook_path.with_suffix(".sync.json")
     manifest_path.write_text(json.dumps({
         "version": 1,
-        "cells": {"02 Research!C2": value_hash("Old generated value")},
+        "cells": {"02 Research!D2": value_hash("Old generated value")},
     }), encoding="utf-8")
 
     result = run_sync(research_dir, workbook_path, backup_dir=tmp_path / "backups")
@@ -126,11 +130,11 @@ def test_updates_owned_cells_but_preserves_manual_values_and_formulas(tmp_path):
     research = workbook["02 Research"]
     execution = workbook["03 Execution"]
     assert result["updated"] == 1
-    assert research["C2"].value == "Manual edit"
-    assert research["D2"].value == "=1+1"
-    assert execution["D2"].value == "approved"
-    assert execution["E2"].value == "start"
-    assert research["E2"].value == "Spreadsheet review"
+    assert research["D2"].value == "Manual edit"
+    assert research["E2"].value == "=1+1"
+    assert execution["D2"].value == "Approved"
+    assert execution["E2"].value == "Start"
+    assert research["F2"].value == "Spreadsheet review"
     workbook.close()
 
 
@@ -160,6 +164,21 @@ def test_missing_research_directory_is_not_counted_as_malformed(tmp_path):
     assert any("Research directory not found" in message for message in result["messages"])
 
 
+def test_company_name_mismatch_is_skipped_by_id(tmp_path):
+    workbook_path = tmp_path / "dashboard.xlsx"
+    research_dir = tmp_path / "research"
+    make_workbook(workbook_path)
+    write_research(research_dir, company="Different Company Ltd")
+    original = workbook_path.read_bytes()
+
+    result = run_sync(research_dir, workbook_path, dry_run=True)
+
+    assert result["added"] == result["updated"] == result["malformed"] == 0
+    assert result["skipped"] == 1
+    assert any("company name does not match" in message for message in result["messages"])
+    assert workbook_path.read_bytes() == original
+
+
 def test_changed_owned_value_sets_needs_review_and_creates_backup(tmp_path):
     workbook_path = tmp_path / "dashboard.xlsx"
     research_dir = tmp_path / "research"
@@ -168,14 +187,14 @@ def test_changed_owned_value_sets_needs_review_and_creates_backup(tmp_path):
     manifest_path = workbook_path.with_suffix(".sync.json")
     manifest_path.write_text(json.dumps({
         "version": 1,
-        "cells": {"02 Research!C2": value_hash("Old generated value")},
+        "cells": {"02 Research!D2": value_hash("Old generated value")},
     }), encoding="utf-8")
 
     result = run_sync(research_dir, workbook_path, backup_dir=tmp_path / "backups")
 
     workbook = load_workbook(workbook_path)
     assert result["updated"] == 1
-    assert workbook["02 Research"]["C2"].value == "Recurring energy services"
-    assert workbook["03 Execution"]["D2"].value == "needs_review"
+    assert workbook["02 Research"]["D2"].value == "Recurring energy services"
+    assert workbook["03 Execution"]["D2"].value == "Pending Review"
     assert Path(result["backup_path"]).is_file()
     workbook.close()

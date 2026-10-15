@@ -29,6 +29,9 @@ organizer/settings.json
 backups/
 outputs/
 logs/
+data/generated/
+data/contacts/
+data/state/
 *.sqlite
 *.sync.json
 STOP
