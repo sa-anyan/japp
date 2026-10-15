@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "company_id": 6,
+  "company": "Shajj Utility Limited",
+  "research_status": "needs_verification",
+  "research_date": "2026-10-15",
+  "website": null,
+  "business_model": "Utility business model not yet established from reliable public sources.",
+  "entry_level_fit": "Potential quotation reconciliation only after business identity and activities are confirmed.",
+  "current_workflow": "Unknown.",
+  "workflow_evidence": "unknown",
+  "opportunity": "Verify what services the company actually provides.",
+  "proposed_product": {
+    "name": "Energy Contract Quote Normaliser",
+    "description": "Verify what services the company actually provides.",
+    "architecture": "Synthetic tariffs and contract quotes → rules-based normalisation → comparison report",
+    "mvp_scope": "Demonstration using synthetic data only; validate operational assumptions with company",
+    "build_effort": "few_prompts",
+    "existing_project_match": "Python energy data analysis",
+    "already_built": false
+  },
+  "impact_model": {
+    "metric": "Validated hours saved per review cycle",
+    "calculation": "(Measured manual minutes - measured prototype minutes) × verified case volume; value hours using agreed loaded rate",
+    "assumptions": [
+      "No company baseline has been measured",
+      "No monetary or time saving is asserted"
+    ],
+    "estimated_value": null,
+    "evidence_level": "unknown"
+  },
+  "existing_tools_check": "Internal adoption and availability of similar tools have not been established; confirm before claiming a product gap.",
+  "confidence": "low",
+  "sources": [
+    {
+      "url": "https://find-and-update.company-information.service.gov.uk/",
+      "supports": "Public business identity or offering; does not verify internal tool gap",
+      "accessed_at": "2026-10-15"
+    }
+  ]
+}
