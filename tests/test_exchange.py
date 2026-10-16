@@ -108,6 +108,15 @@ def test_input_package_is_portable_and_tracks_original_version(setup_exchange):
     assert state.published_input_hash("2") == package["input_hash"]
 
 
+def test_package_scope_leaves_unselected_company_untouched(setup_exchange):
+    config, repo, state = setup_exchange
+    assert package_inputs(config, repo, state, company_ids={"4", "5"})["packaged"] == 0
+    assert repo.published == []
+    assert state.get_company("2") is None
+    assert not (repo.path / "companies").exists()
+    assert package_inputs(config, repo, state, company_ids={"2"})["packaged"] == 1
+
+
 def test_proposal_placeholder_is_detected(setup_exchange):
     config, repo, state = setup_exchange
     (config["paths"]["prompts_dir"] / "proposal_prompt.md").write_text(

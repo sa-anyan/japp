@@ -67,6 +67,10 @@ After ChatGPT commits research:
 .venv/bin/python main.py exchange package
 ```
 
+To process only newly selected companies while preserving existing drafts:
+`.venv/bin/python main.py exchange package --company-id 4 --company-id 5`.
+Each selected company must still be Approved + Start.
+
 Research ID/name pairs are validated. Missing research or missing user inputs are reported;
 other ready companies can continue. The existing safe research synchroniser updates Excel
 with a backup. Each ready company gets a portable private input folder:

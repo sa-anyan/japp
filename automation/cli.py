@@ -118,7 +118,8 @@ def build_parser() -> argparse.ArgumentParser:
     exchange_parser = commands.add_parser("exchange", help="Private japp_data research and document workflow")
     exchange_commands = exchange_parser.add_subparsers(dest="exchange_command", required=True)
     exchange_commands.add_parser("research", help="Publish approved company research requests")
-    exchange_commands.add_parser("package", help="Pull research and publish master CV, prompts and inputs")
+    package_parser = exchange_commands.add_parser("package", help="Pull research and publish master CV, prompts and inputs")
+    package_parser.add_argument("--company-id", action="append", help="Package only this approved ID; repeat for multiple companies")
     discovery = exchange_commands.add_parser("contacts", help="Find Apollo decision makers and reveal work emails")
     discovery.add_argument("--reveal-emails", action="store_true", required=True)
     discovery.add_argument("--max-reveals", type=int, required=True, help="Maximum new enrichment calls this run (not a credit-price guarantee)")
@@ -211,7 +212,8 @@ def main(argv: list[str] | None = None) -> int:
                 state = StateStore(paths["database"])
                 state.initialize()
                 if args.exchange_command == "package":
-                    result = package_inputs(config, repo, state)
+                    result = package_inputs(config, repo, state,
+                                            company_ids=set(args.company_id) if args.company_id else None)
                 elif args.exchange_command == "contacts":
                     from .contact_discovery import discover_contacts
                     result = discover_contacts(config, repo, state, reveal_emails=args.reveal_emails,

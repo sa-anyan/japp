@@ -164,8 +164,11 @@ def export_research(config: dict[str, Any], repo: PrivateRepository) -> dict[str
             "next": f"Ask ChatGPT to research requests/{batch_id}/companies.json and commit company research plus research/contact_candidates JSON."}
 
 
-def package_inputs(config: dict[str, Any], repo: PrivateRepository, state: StateStore) -> dict[str, Any]:
+def package_inputs(config: dict[str, Any], repo: PrivateRepository, state: StateStore, *,
+                   company_ids: set[str] | None = None) -> dict[str, Any]:
     rows = approved(config)
+    if company_ids is not None:
+        rows = [row for row in rows if row.company_id in company_ids]
     research_dir = inside(repo.path, "research/companies")
     records = {}
     for path in sorted(research_dir.glob("*.json")):
