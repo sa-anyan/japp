@@ -5,6 +5,32 @@ from automation.exchange import company_folder
 from automation.linkedin_queue import refresh_linkedin_queue
 
 
+def test_named_documents_and_later_verified_email(setup_exchange):
+    config, repo, state = setup_exchange
+    config['paths']['private_repo_dir'] = repo.path
+    output = company_folder(repo.path, '2', 'Example Energy') / 'outputs'
+    output.mkdir(parents=True)
+    for kind in ('CV', 'Proposal'):
+        (output / f'Samuel Anyan_Example Energy_{kind}.docx').write_bytes(b'fixture')
+    profile = 'https://www.linkedin.com/in/a-person'
+    state.save_contact('2', 'Example Energy', full_name='A Person', linkedin_url=profile)
+    (output / 'linkedin_outreach.json').write_text(json.dumps({'messages': [
+        {'full_name': 'A Person', 'linkedin_url': profile, 'body': 'A contribution'}]}))
+    refresh_linkedin_queue(config, state)
+    book = load_workbook(config['paths']['workbook'])
+    assert book['05 LinkedIn']['K2'].value == 'Ready to copy'
+    assert book['05 LinkedIn']['H2'].value.endswith('_CV.docx')
+    book.close()
+    state.save_contact('2', 'Example Energy', full_name='A Person', email='a@example.com',
+                       linkedin_url=profile, email_status='verified')
+    refresh_linkedin_queue(config, state)
+    book = load_workbook(config['paths']['workbook'])
+    assert book['05 LinkedIn']['K2'].value == 'Email available'
+    assert book['05 LinkedIn']['J2'].value is None
+    assert book['03 Execution'].cell(2, 7).value == 'Email available'
+    book.close()
+
+
 def test_linkedin_queue_preserves_manual_send_and_never_implies_email_sent(setup_exchange):
     config, repo, state = setup_exchange
     config['paths']['private_repo_dir'] = repo.path

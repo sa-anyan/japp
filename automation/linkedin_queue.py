@@ -63,6 +63,8 @@ def refresh_linkedin_queue(config, state: StateStore):
             folder = folders[0]; output = folder / 'outputs'
             leads = _read(root / 'research/contact_candidates' / f'{company.company_id}.json')
             people = state.list_contacts(company.company_id)
+            verified_profiles = {_profile(p.get('linkedin_url')).rstrip('/').casefold() for p in people
+                                 if p.get('email') and p.get('email_status') == 'verified'} - {''}
             people += [dict(x, full_name=x.get('full_name', '')) for x in
                        leads.get('candidates', []) + leads.get('unverified_people', [])]
             messages = _read(output / 'linkedin_outreach.json').get('messages', [])
@@ -72,6 +74,7 @@ def refresh_linkedin_queue(config, state: StateStore):
                 if not name or key in seen: continue
                 seen.add(key)
                 if person.get('email') and person.get('email_status') == 'verified': continue
+                if _profile(person.get('linkedin_url')).rstrip('/').casefold() in verified_profiles: continue
                 r = existing.get(key) or sheet.max_row + 1
                 old = [sheet.cell(r, col).value for col in range(1, len(HEADERS)+1)]
                 profile = _profile(person.get('linkedin_url'))
@@ -79,6 +82,10 @@ def refresh_linkedin_queue(config, state: StateStore):
                                 if str(x.get('full_name', '')).casefold() == name.casefold()
                                 and _profile(x.get('linkedin_url')) == profile and profile), '')
                 cv, proposal = output / 'tailored-cv.docx', output / 'proposal.docx'
+                named_cvs = list(output.glob('Samuel Anyan_*_CV.docx'))
+                named_proposals = list(output.glob('Samuel Anyan_*_Proposal.docx'))
+                if len(named_cvs) == 1: cv = named_cvs[0]
+                if len(named_proposals) == 1: proposal = named_proposals[0]
                 docs = cv.is_file() and proposal.is_file()
                 ready = bool(profile and message and docs)
                 status = ('Do not contact' if person.get('suppressed') else
@@ -106,12 +113,21 @@ def refresh_linkedin_queue(config, state: StateStore):
             erow = _find_row(execution, columns['ID Number'], company.company_id)
             if erow and statuses:
                 execution.cell(erow, status_col, 'Ready to copy' if 'Ready to copy' in statuses else statuses[0])
+            elif erow and verified_profiles:
+                execution.cell(erow, status_col, 'Email available')
+            for rr in range(2, sheet.max_row + 1):
+                if (str(sheet.cell(rr, 1).value) == company.company_id
+                        and _profile(sheet.cell(rr, 5).value).rstrip('/').casefold() in verified_profiles
+                        and sheet.cell(rr, 11).value not in MANUAL):
+                    sheet.cell(rr, 6, 'Verified email available')
+                    sheet.cell(rr, 10, '')
+                    sheet.cell(rr, 11, 'Email available')
         sheet.freeze_panes = 'C2'; sheet.auto_filter.ref = f'A1:M{max(2, sheet.max_row)}'
         sheet.sheet_view.showGridLines = False
         widths = [12, 38, 22, 30, 42, 24, 28, 32, 32, 85, 24, 18, 55]
         for col, width in enumerate(widths, 1): sheet.column_dimensions[sheet.cell(1, col).column_letter].width = width
         sheet.data_validations.dataValidation = []
-        validation = DataValidation(type='list', formula1='"Profile needed,Documents needed,Message needed,Ready to copy,Sent manually,Replied,Do not contact"', allow_blank=True, showErrorMessage=True)
+        validation = DataValidation(type='list', formula1='"Profile needed,Documents needed,Message needed,Ready to copy,Email available,Sent manually,Replied,Do not contact"', allow_blank=True, showErrorMessage=True)
         validation.add(f'K2:K{max(1201, sheet.max_row)}'); sheet.add_data_validation(validation)
         backup = Path(config['paths']['backup_dir']) / ('linkedin-' + datetime.now().strftime('%Y%m%d-%H%M%S-%f') + '.xlsx')
         backup.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(workbook, backup)
