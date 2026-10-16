@@ -148,6 +148,21 @@ the completed documents and output manifests using the private README contract.
 
 ## 4. Collect, draft and send
 
+### Manual LinkedIn fallback when no email is available
+
+Run `.venv/bin/python main.py exchange linkedin` after researching contacts or updating
+`outputs/linkedin_outreach.json`. Packaging, collection and API contact discovery also
+refresh this queue. The connected workbook's `05 LinkedIn` tab contains the profile,
+document links, copyable message and separate LinkedIn status. `03 Execution` also shows
+the LinkedIn status without changing email pipeline progress.
+
+Filter `LinkedIn Status` to `Ready to copy`. Review the document status, open the profile,
+copy `Message to Copy` and send it yourself. Then select `Sent manually` and enter the
+sent date. Refreshes preserve that status, your sent message, date and notes. `Replied`
+and `Do not contact` are also manual statuses. Nothing sends to LinkedIn automatically.
+Ready to copy means a profile, message and document files exist, not that the documents
+have passed their final CV audit; review-draft files are explicitly labelled.
+
 ```sh
 .venv/bin/python main.py exchange deliver
 ```

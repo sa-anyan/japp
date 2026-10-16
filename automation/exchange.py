@@ -63,6 +63,13 @@ Use the supplied outreach prompt as writing instructions, not literal email cont
 Only use exact verified, unsuppressed recipients from contacts.json. No template labels,
 unresolved placeholders or invented personalisation. Contacts may arrive after CV preparation:
 finish CVs first, then add recipient-specific outreach when contacts.json is present.
+For a named contact with a supplied LinkedIn profile but no work email, also write
+outputs/linkedin_outreach.json as {"messages":[{"full_name":"exact contact name",
+"linkedin_url":"exact supplied profile URL","body":"final message for manual copy/paste"}]}.
+Use the exact modular prompt's O1–O3 writing rules, adapted to LinkedIn. Do not claim
+attachments are included: invite the person to view the portfolio or request the CV
+and proposal. Do not invent a profile or send the message. This fallback does not
+require an email or a ready email manifest.
 
 Commit files first, then mark each company complete by committing outputs/manifest.json:
 {"schema_version":"1.0", "ready":true, "company_id":"ID", "company":"Exact Company",
@@ -251,6 +258,8 @@ def package_inputs(config: dict[str, Any], repo: PrivateRepository, state: State
             update_pipeline_status(config["paths"]["workbook"], row.company_id,
                                    state.get_company(row.company_id)["state"])
             state.record_event("private_inputs_published", row.company_id, {"repository": repo.repository})
+    from .linkedin_queue import refresh_linkedin_queue
+    refresh_linkedin_queue({**config, "paths": {**config["paths"], "private_repo_dir": repo.path}}, state)
     return {"packaged": len(packaged), "waiting": waiting,
             "next": "Ask ChatGPT to prepare documents from companies/*/inputs. Run exchange contacts while it works."}
 
@@ -316,4 +325,6 @@ def collect_outputs(config: dict[str, Any], repo: PrivateRepository, state: Stat
                                state.get_company(row.company_id)["state"])
         state.record_event("private_outputs_collected", row.company_id, {"input_hash": package["input_hash"]})
         collected.append(row.company_id)
+    from .linkedin_queue import refresh_linkedin_queue
+    refresh_linkedin_queue({**config, "paths": {**config["paths"], "private_repo_dir": repo.path}}, state)
     return {"collected": collected, "waiting": waiting}

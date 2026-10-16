@@ -124,6 +124,7 @@ def build_parser() -> argparse.ArgumentParser:
     discovery.add_argument("--reveal-emails", action="store_true", required=True)
     discovery.add_argument("--max-reveals", type=int, required=True, help="Maximum new enrichment calls this run (not a credit-price guarantee)")
     exchange_commands.add_parser("collect", help="Pull, validate and organise completed output files")
+    exchange_commands.add_parser("linkedin", help="Refresh the manual LinkedIn message queue in Excel")
     delivery = exchange_commands.add_parser("deliver", help="Collect results and create email drafts")
     delivery.add_argument("--send", action="store_true", help="Explicitly approve this batch and send; requires mail.send_enabled=true")
     dashboard = commands.add_parser("dashboard-copy", help="Add a Start selector to a new dashboard copy")
@@ -211,7 +212,10 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 state = StateStore(paths["database"])
                 state.initialize()
-                if args.exchange_command == "package":
+                if args.exchange_command == "linkedin":
+                    from .linkedin_queue import refresh_linkedin_queue
+                    result = refresh_linkedin_queue(config, state)
+                elif args.exchange_command == "package":
                     result = package_inputs(config, repo, state,
                                             company_ids=set(args.company_id) if args.company_id else None)
                 elif args.exchange_command == "contacts":

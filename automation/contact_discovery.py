@@ -98,5 +98,7 @@ def discover_contacts(config: dict[str, Any], repo: PrivateRepository, state: St
         repo.publish(files, "Publish approved company Apollo contacts")
         for company_id in ready_ids:
             update_pipeline_status(config["paths"]["workbook"], company_id, "Contacts Ready")
+    from .linkedin_queue import refresh_linkedin_queue
+    refresh_linkedin_queue({**config, "paths": {**config["paths"], "private_repo_dir": repo.path}}, state)
     return {"reveals": reveals, "contacts_saved": saved, "waiting": waiting,
             "next": "Ask ChatGPT to use contacts.json for final outreach and commit ready output manifests."}
