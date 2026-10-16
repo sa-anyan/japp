@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 .venv/
+.venv
 venv/
 env/
 
@@ -32,6 +33,8 @@ logs/
 data/generated/
 data/contacts/
 data/state/
+data/private_repo/
+data/local/
 *.sqlite
 *.sync.json
 STOP

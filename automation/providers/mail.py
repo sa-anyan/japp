@@ -144,6 +144,13 @@ class GraphOutlookProvider:
             })
         return message_id
 
+    def check_connection(self) -> dict:
+        profile = self._request("GET", "/me?$select=id,displayName,mail,userPrincipalName").json()
+        folder = self._request("GET", "/me/mailFolders/drafts?$select=id,displayName").json()
+        return {"provider": "outlook", "name": profile.get("displayName", ""),
+                "email": profile.get("mail") or profile.get("userPrincipalName", ""),
+                "drafts_access": bool(folder.get("id"))}
+
     def send_draft(self, provider_id: str) -> str:
         self._request("POST", f"/me/messages/{provider_id}/send")
         return provider_id

@@ -64,7 +64,7 @@ def _doctor(config: dict[str, Any]) -> int:
         if missing:
             issues.append(f"Workbook is missing sheets: {', '.join(sorted(missing))}")
     prompt_dir = Path(config["paths"]["prompts_dir"])
-    for prompt in ("cv_tailoring_prompt.md", "proposal_prompt.md", "outreach_template.md"):
+    for prompt in ("cv_tailoring_prompt.md",):
         if not (prompt_dir / prompt).is_file():
             issues.append(f"Prompt file is missing: {prompt_dir / prompt}")
     if config["mail"]["provider"] == "mock":
@@ -113,6 +113,24 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser("stop", help="Request graceful shutdown after the current step")
     commands.add_parser("status", help="Show engine and workflow status")
     commands.add_parser("doctor", help="Validate local configuration and workbook")
+    connect = commands.add_parser("connect", help="Sign in and verify mailbox access without creating or sending email")
+    connect.add_argument("site", choices=("outlook",))
+    exchange_parser = commands.add_parser("exchange", help="Private japp_data research and document workflow")
+    exchange_commands = exchange_parser.add_subparsers(dest="exchange_command", required=True)
+    research_parser = exchange_commands.add_parser("research", help="Publish approved company research requests")
+    research_parser.add_argument("--company-id", action="append", help="Export only this approved ID; repeat for multiple companies")
+    package_parser = exchange_commands.add_parser("package", help="Pull research and publish master CV, prompts and inputs")
+    package_parser.add_argument("--company-id", action="append", help="Package only this approved ID; repeat for multiple companies")
+    discovery = exchange_commands.add_parser("contacts", help="Find Apollo decision makers and reveal work emails")
+    discovery.add_argument("--reveal-emails", action="store_true", required=True)
+    discovery.add_argument("--max-reveals", type=int, required=True, help="Maximum new enrichment calls this run (not a credit-price guarantee)")
+    exchange_commands.add_parser("collect", help="Pull, validate and organise completed output files")
+    exchange_commands.add_parser("linkedin", help="Refresh the manual LinkedIn message queue in Excel")
+    delivery = exchange_commands.add_parser("deliver", help="Collect results and create email drafts")
+    delivery.add_argument("--send", action="store_true", help="Explicitly approve this batch and send; requires mail.send_enabled=true")
+    dashboard = commands.add_parser("dashboard-copy", help="Add a Start selector to a new dashboard copy")
+    dashboard.add_argument("--output", type=Path, required=True)
+    dashboard.add_argument("--activate", action="store_true", help="Use the new copy in your local config")
 
     sync_parser = commands.add_parser("sync", help="Synchronize local research JSON into Excel")
     sync_parser.add_argument("--research-dir", type=Path)
@@ -164,6 +182,55 @@ def main(argv: list[str] | None = None) -> int:
     try:
         config = load_config(args.config)
         paths = config["paths"]
+
+        if args.command == "connect":
+            if config["mail"]["provider"] != "outlook":
+                raise ValueError("Set mail.provider=outlook in local configuration first")
+            result = create_mail_provider(config).check_connection()
+            if not result["email"] or not result["drafts_access"]:
+                raise ValueError("Outlook sign-in did not verify both account identity and Drafts access")
+            print(json.dumps({**result, "send_enabled": config["mail"]["send_enabled"]}, indent=2))
+            return 0
+
+        if args.command == "dashboard-copy":
+            from .dashboard import dashboard_copy
+            output = dashboard_copy(Path(paths["workbook"]), args.output)
+            if args.activate:
+                config_path = Path(config["config_path"])
+                local = json.loads(config_path.read_text(encoding="utf-8")) if config_path.is_file() else {}
+                local.setdefault("paths", {})["workbook"] = str(output)
+                config_path.parent.mkdir(parents=True, exist_ok=True)
+                config_path.write_text(json.dumps(local, indent=2) + "\n", encoding="utf-8")
+            print(output)
+            return 0
+        if args.command == "exchange":
+            from .exchange import collect_outputs, export_research, package_inputs
+            from .private_repository import PrivateRepository
+            repo = PrivateRepository(config)
+            repo.sync()
+            if args.exchange_command == "research":
+                result = export_research(config, repo,
+                                         company_ids=set(args.company_id) if args.company_id else None)
+            else:
+                state = StateStore(paths["database"])
+                state.initialize()
+                if args.exchange_command == "linkedin":
+                    from .linkedin_queue import refresh_linkedin_queue
+                    result = refresh_linkedin_queue(config, state)
+                elif args.exchange_command == "package":
+                    result = package_inputs(config, repo, state,
+                                            company_ids=set(args.company_id) if args.company_id else None)
+                elif args.exchange_command == "contacts":
+                    from .contact_discovery import discover_contacts
+                    result = discover_contacts(config, repo, state, reveal_emails=args.reveal_emails,
+                                               max_reveals=args.max_reveals)
+                elif args.exchange_command == "collect":
+                    result = collect_outputs(config, repo, state)
+                else:
+                    from .delivery import deliver
+                    result = deliver(config, repo, state, send=args.send)
+            print(json.dumps(result, indent=2))
+            return 0
 
         if args.command == "doctor":
             return _doctor(config)
@@ -274,6 +341,6 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 print(json.dumps(result, indent=2))
                 return 0
-    except (OSError, ValueError, RuntimeError) as exc:
+    except (OSError, ValueError, RuntimeError, KeyError, TypeError) as exc:
         parser.exit(2, f"Error: {exc}\n")
     return 0

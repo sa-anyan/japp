@@ -12,8 +12,10 @@ from typing import Any, Iterable
 from openpyxl import load_workbook
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
 
 from .sync import normalize_id
+from .pipeline_status import PIPELINE_OPTIONS, display_status, next_display_status
 
 
 def _header_map(sheet) -> dict[str, int]:
@@ -45,32 +47,96 @@ def _atomic_save(workbook, path: Path) -> None:
             temp_path.unlink(missing_ok=True)
 
 
+def ensure_pipeline_column(sheet) -> tuple[int, bool]:
+    """Install the progress dropdown, migrate old labels and initialise ID rows."""
+    columns = _header_map(sheet)
+    changed = False
+    column = columns.get("Pipeline Status")
+    if column is None:
+        column = sheet.max_column + 1
+        cell = sheet.cell(1, column, "Pipeline Status")
+        source = sheet.cell(1, columns["CV Tailoring"])
+        if source.has_style:
+            cell._style = copy(source._style)
+        sheet.column_dimensions[get_column_letter(column)].width = 24
+        changed = True
+    letter = get_column_letter(column)
+    if (sheet.column_dimensions[letter].width or 0) < 24:
+        sheet.column_dimensions[letter].width = 24
+        changed = True
+    formula = '"' + ','.join(PIPELINE_OPTIONS) + '"'
+    target = f"{letter}2:{letter}{max(sheet.max_row, 1201)}"
+    matching = [v for v in sheet.data_validations.dataValidation
+                if str(v.sqref) == target and v.formula1 == formula
+                and v.showDropDown is False]
+    if len(matching) != 1 or any(
+        v not in matching and any(r.min_col <= column <= r.max_col for r in v.sqref.ranges)
+        for v in sheet.data_validations.dataValidation
+    ):
+        for validation in list(sheet.data_validations.dataValidation):
+            remaining = []
+            for span in validation.sqref.ranges:
+                if not span.min_col <= column <= span.max_col:
+                    remaining.append(str(span))
+                    continue
+                if span.min_col < column:
+                    remaining.append(f"{get_column_letter(span.min_col)}{span.min_row}:{get_column_letter(column-1)}{span.max_row}")
+                if column < span.max_col:
+                    remaining.append(f"{get_column_letter(column+1)}{span.min_row}:{get_column_letter(span.max_col)}{span.max_row}")
+            if remaining:
+                validation.sqref = ' '.join(remaining)
+            else:
+                sheet.data_validations.dataValidation.remove(validation)
+        validation = DataValidation(type="list", formula1=formula, allow_blank=True,
+                                    showDropDown=False, showErrorMessage=True)
+        validation.error = "Choose a Pipeline Status from the list."
+        validation.add(target)
+        sheet.add_data_validation(validation)
+        changed = True
+    for row in range(2, sheet.max_row + 1):
+        if normalize_id(sheet.cell(row, columns["ID Number"]).value) is None:
+            continue
+        cell = sheet.cell(row, column)
+        value = display_status(cell.value)
+        # Sent rows from older workbooks should also be protected before a rerun.
+        if str(sheet.cell(row, columns["Status"]).value or "").strip().casefold() == "emailed":
+            value = "Completed"
+        if cell.value != value:
+            cell.value = value
+            changed = True
+    return column, changed
+
+
+def install_pipeline_status(workbook_path: Path | str) -> bool:
+    path = Path(workbook_path).expanduser()
+    workbook = load_workbook(path)
+    try:
+        _, changed = ensure_pipeline_column(workbook["03 Execution"])
+        if changed:
+            _atomic_save(workbook, path)
+        return changed
+    finally:
+        workbook.close()
+
+
 def update_pipeline_status(workbook_path: Path | str, company_id: int | str, status: str) -> bool:
     path = Path(workbook_path).expanduser()
     workbook = load_workbook(path)
     try:
         sheet = workbook["03 Execution"]
         columns = _header_map(sheet)
-        if "Pipeline Status" not in columns:
-            column = sheet.max_column + 1
-            cell = sheet.cell(1, column, "Pipeline Status")
-            source = sheet.cell(1, column - 1)
-            if source.has_style:
-                cell._style = copy(source._style)
-            cell.font = copy(cell.font)
-            sheet.column_dimensions[get_column_letter(column)].width = max(
-                sheet.column_dimensions[get_column_letter(column - 1)].width or 12, 22
-            )
-            columns["Pipeline Status"] = column
+        column, changed = ensure_pipeline_column(sheet)
         row = _find_row(sheet, columns["ID Number"], company_id)
         if row is None:
             raise ValueError(f"Company ID {company_id} not found in 03 Execution")
-        cell = sheet.cell(row, columns["Pipeline Status"])
-        if cell.value == status:
-            return False
-        cell.value = status
-        _atomic_save(workbook, path)
-        return True
+        cell = sheet.cell(row, column)
+        value = next_display_status(cell.value, status)
+        if cell.value != value:
+            cell.value = value
+            changed = True
+        if changed:
+            _atomic_save(workbook, path)
+        return changed
     finally:
         workbook.close()
 
@@ -232,6 +298,11 @@ def mark_execution_emailed(workbook_path: Path | str, company_id: int | str) -> 
             if str(cell.value or "").strip().casefold() != value.casefold():
                 cell.value = value
                 changed = True
+        column, installed = ensure_pipeline_column(sheet)
+        changed = changed or installed
+        if sheet.cell(row, column).value != "Completed":
+            sheet.cell(row, column).value = "Completed"
+            changed = True
         if changed:
             _atomic_save(workbook, path)
         return changed

@@ -17,6 +17,7 @@ class ApprovedCompany:
     company: str
     execution_status: str
     cv_tailoring: str
+    pipeline_status: str = ""
 
 
 def _normalise_choice(value: Any) -> str:
@@ -55,6 +56,7 @@ def read_execution_rows(workbook_path: Path | str, registry_path: Path | str | N
                 company=company,
                 execution_status=str(value("Status") or "").strip(),
                 cv_tailoring=str(value("CV Tailoring") or "").strip(),
+                pipeline_status=str(value("Pipeline Status") or "").strip() if "Pipeline Status" in headers else "",
             ))
         return results
     finally:
@@ -67,4 +69,5 @@ def eligible_companies(workbook_path: Path | str, registry_path: Path | str | No
         row for row in read_execution_rows(workbook_path, registry_path)
         if _normalise_choice(row.execution_status) == "approved"
         and _normalise_choice(row.cv_tailoring) == "start"
+        and _normalise_choice(row.pipeline_status) != "completed"
     ]
