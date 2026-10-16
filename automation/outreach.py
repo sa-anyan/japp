@@ -113,6 +113,10 @@ def create_email_batch(config: dict[str, Any], state: StateStore,
             continue
         company_id = company_record.company_id
         company = company_record.company
+        saved_company = state.get_company(company_id)
+        if saved_company and saved_company["state"] == "COMPLETED":
+            skipped.append(f"{company_id}: company already completed in SQLite")
+            continue
         company_contacts = [c for c in contacts if c["company_id"] == company_id]
         eligible_contacts = [
             contact for contact in company_contacts
@@ -233,6 +237,12 @@ def draft_email_batch(config: dict[str, Any], state: StateStore, batch_id: str,
         except Exception as exc:
             state.finish_message(message["idempotency_key"], "failed", error=str(exc))
             failed += 1
+    stored_messages = state.list_messages(batch_id)
+    for company_id in {message["company_id"] for message in payload["messages"]}:
+        expected = [m for m in payload["messages"] if m["company_id"] == company_id]
+        actual = [m for m in stored_messages if m["company_id"] == company_id]
+        if len(actual) == len(expected) and all(m["status"] == "drafted" for m in actual):
+            update_pipeline_status(config["paths"]["workbook"], company_id, "Email Drafted")
     return {"drafted": drafted, "skipped": skipped, "failed": failed}
 
 
@@ -320,9 +330,11 @@ def send_approved_batch(config: dict[str, Any], state: StateStore, batch_id: str
              if item["contact_id"] == message["contact_id"]),
             None,
         )
+        company_state = state.get_company(message["company_id"])
         if (
             not stored or stored["status"] != "drafted" or not stored["provider_id"]
             or message["company_id"] not in eligible
+            or (company_state and company_state["state"] == "COMPLETED")
             or message["email_status"] != "verified"
             or not contact or contact["suppressed"]
             or contact["email_status"] != "verified"

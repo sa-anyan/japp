@@ -51,7 +51,8 @@ then save and close Excel. Both values are checked again at each stage and befor
 
 This clones/syncs the private repo, publishes `requests/<batch-id>/companies.json` and
 a README output contract. Only current Approved + Start companies are exported.
-The workbook is only read. Repeat exports of identical requests have the same batch ID.
+After a successful push, the workbook's Pipeline Status becomes `Exported`.
+Repeat exports of identical requests have the same batch ID.
 Research is intentionally done by ChatGPT after this command, rather than by this command.
 
 Tell ChatGPT: “Read the latest request in japp_data, follow its README contract,
@@ -82,7 +83,7 @@ companies/<ID>_<Company>/
     TASK.md
 ```
 
-SQLite and Excel advance to `AWAITING_AI_OUTPUT`. Local absolute paths are removed from
+SQLite advances to `AWAITING_AI_OUTPUT`; Excel shows `Researched`. Local absolute paths are removed from
 the uploaded package. Inputs are hashed and the published hash is saved locally in SQLite.
 The separate speculative branch uses company relevance and CV evidence without inventing
 a job description or claiming an ATS/JD match score. Advertised roles use the verified JD.
@@ -161,6 +162,33 @@ If there is one existing pending batch, delivery resumes it; with multiple batch
 the existing `batch` commands to select one. Review the published batch's recipients and
 content before using `--send`. A partial batch resumes without resending sent messages;
 uncertain sends are not automatically retried.
+
+## Automatic Pipeline Status column
+
+`03 Execution` includes a Pipeline Status dropdown beside Status and CV Tailoring.
+Existing blank ID rows initialise to `Not Started`; old internal state labels are migrated
+to readable labels. The detailed internal states remain in SQLite.
+
+| Successful stage | Excel Pipeline Status |
+| --- | --- |
+| Initial dashboard setup | Not Started |
+| `exchange research` publishes the request | Exported |
+| `exchange package` validates returned research | Researched |
+| `exchange contacts` publishes verified, unsuppressed contacts | Contacts Ready |
+| `exchange collect` or `deliver` validates and files final outputs | Documents Ready |
+| Batch created, provider drafts not yet complete | Draft Pending |
+| All provider drafts for a company succeed | Email Drafted |
+| Batch approval | Email Queued |
+| Some company emails successfully submitted | Sending |
+| All company emails successfully submitted | Completed |
+
+The dropdown also includes Awaiting User Inputs, Failed and Cancelled.
+Earlier stages do not overwrite a later progress label when rerun. Completed is sticky
+for automatic updates, and rows marked Completed are excluded from approval queues,
+batch creation and fresh send eligibility checks, even if Approved + Start remain selected.
+SQLite's completed-company and per-message send history independently block duplicate
+delivery; changing an Excel label does not reset that history. A failed/uncertain or
+partially sent batch is not marked Completed.
 
 ## Testing
 

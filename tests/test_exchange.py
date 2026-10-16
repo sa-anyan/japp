@@ -75,13 +75,16 @@ def finish_outputs(config, repo, state):
     return folder, manifest
 
 
-def test_research_export_is_stable_and_preserves_workbook(setup_exchange):
+def test_research_export_is_stable_and_updates_only_pipeline_status(setup_exchange):
     config, repo, _ = setup_exchange
-    before = config["paths"]["workbook"].read_bytes()
     result = export_research(config, repo)
     assert result["companies"] == 1
     assert result["batch_id"] == export_research(config, repo)["batch_id"]
-    assert config["paths"]["workbook"].read_bytes() == before
+    book = load_workbook(config["paths"]["workbook"])
+    assert book["03 Execution"]["D2"].value == "Approved"
+    assert book["03 Execution"]["E2"].value == "Start"
+    assert book["03 Execution"]["F2"].value == "Exported"
+    book.close()
     request = json.loads((repo.path / f"requests/{result['batch_id']}/companies.json").read_text())
     assert request["companies"][0]["company_id"] == "2"
 
@@ -96,6 +99,9 @@ def test_input_package_is_portable_and_tracks_original_version(setup_exchange):
     assert "package_path" not in package and "output_dir" not in package
     assert state.published_input_hash("2") == package["input_hash"]
     assert state.get_company("2")["state"] == "AWAITING_AI_OUTPUT"
+    book = load_workbook(config["paths"]["workbook"])
+    assert book["03 Execution"]["F2"].value == "Researched"
+    book.close()
     assert (folder / "inputs/master_cv.docx").read_bytes() == config["paths"]["master_cv"].read_bytes()
     assert "speculative" in (folder / "inputs/TASK.md").read_text()
     assert package_inputs(config, repo, state)["packaged"] == 1
@@ -120,7 +126,7 @@ def test_collect_renames_pair_updates_states_and_is_idempotent(setup_exchange):
     folder = config["paths"]["generated_dir"] / "2_Example Energy"
     assert (folder / expected_filename("Example Energy", "Speculative Approach", "CV")).is_file()
     book = load_workbook(config["paths"]["workbook"])
-    assert book["03 Execution"]["F2"].value == "CONTACTS_READY"
+    assert book["03 Execution"]["F2"].value == "Documents Ready"
     assert book["03 Execution"]["D2"].value == "Approved"
     assert book["03 Execution"]["E2"].value == "Start"
     book.close()
@@ -165,6 +171,9 @@ def test_delivery_uses_final_copy_not_prompt_and_requires_send_flag(setup_exchan
     config["mail"]["min_send_pause_seconds"] = config["mail"]["max_send_pause_seconds"] = 0
     result = deliver(config, repo, state, provider=provider)
     assert result["drafts"]["drafted"] == 1 and result["sent"] == 0
+    book = load_workbook(config["paths"]["workbook"])
+    assert book["03 Execution"]["F2"].value == "Email Drafted"
+    book.close()
     batch = state.get_batch(result["batch_id"])
     assert batch["payload"]["messages"][0]["subject"] == "An introduction to Example Energy"
     assert "{recipient_name}" not in batch["payload"]["messages"][0]["body"]
@@ -173,6 +182,9 @@ def test_delivery_uses_final_copy_not_prompt_and_requires_send_flag(setup_exchan
     sent = deliver(config, repo, state, send=True, provider=provider)
     assert sent["sent"] == 1
     assert state.get_company("2")["state"] == "COMPLETED"
+    book = load_workbook(config["paths"]["workbook"])
+    assert book["03 Execution"]["F2"].value == "Completed"
+    book.close()
     assert deliver(config, repo, state, send=True, provider=provider)["batch_id"] is None
 
 
@@ -198,6 +210,9 @@ def test_apollo_reveals_are_cached_and_preserve_suppression(setup_exchange):
     api = FakeApollo()
     kwargs = dict(reveal_emails=True, max_reveals=1, provider=api)
     assert discover_contacts(config, repo, state, **kwargs)["contacts_saved"] == 1
+    book = load_workbook(config["paths"]["workbook"])
+    assert book["03 Execution"]["F2"].value == "Contacts Ready"
+    book.close()
     state.set_contact_suppressed(state.list_contacts("2")[0]["contact_id"])
     assert discover_contacts(config, repo, state, **kwargs)["reveals"] == 0
     assert api.calls == 1 and state.list_contacts("2")[0]["suppressed"]

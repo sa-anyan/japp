@@ -134,6 +134,8 @@ def export_research(config: dict[str, Any], repo: PrivateRepository) -> dict[str
     readme = inside(repo.path, "README.md")
     readme.write_text(CONTRACT, encoding="utf-8")
     repo.publish([request, readme], f"Export approved research request {batch_id}")
+    for row in rows:
+        update_pipeline_status(config["paths"]["workbook"], row.company_id, "Exported")
     return {"companies": len(companies), "batch_id": batch_id, "published": True,
             "next": f"Ask ChatGPT to research requests/{batch_id}/companies.json and commit research/companies JSON."}
 
@@ -157,11 +159,13 @@ def package_inputs(config: dict[str, Any], repo: PrivateRepository, state: State
         research_path, record = records[row.company_id]
         if normalize_company_name(record["company"]) != normalize_company_name(row.company):
             raise ValueError(f"Research/company mismatch for {row.company_id}")
+        update_pipeline_status(config["paths"]["workbook"], row.company_id, "Researched")
         private_config = {**config, "paths": {**config["paths"], "research_dir": research_dir}}
         package = build_input_package(row.company_id, private_config,
                                       role=record.get("role", ""), job_description=record.get("job_description", ""))
         if package["missing_inputs"]:
             waiting.append(f"{row.company_id}: missing {', '.join(package['missing_inputs'])}")
+            update_pipeline_status(config["paths"]["workbook"], row.company_id, "Awaiting User Inputs")
             continue
         folder = company_folder(repo.path, row.company_id, row.company)
         inputs = inside(repo.path, f"{folder.relative_to(repo.path).as_posix()}/inputs")

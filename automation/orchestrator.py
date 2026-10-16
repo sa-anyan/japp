@@ -177,6 +177,7 @@ def monitor_handoffs(config: dict[str, Any], state: StateStore,
         for row in read_execution_rows(config["paths"]["workbook"], config["paths"]["registry"])
         if row.execution_status.strip().casefold() == "approved"
         and row.cv_tailoring.strip().casefold() == "start"
+        and row.pipeline_status.strip().casefold() != "completed"
     }
     resumed = cancelled = 0
     for company_state in state.list_companies():

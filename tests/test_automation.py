@@ -355,7 +355,7 @@ def test_supervised_handoff_opens_ui_and_auto_files_new_validated_downloads(tmp_
         assert state.get_handoff(2)["status"] == "completed"
         assert state.get_company(2)["state"] == "DOCUMENTS_READY"
         workbook = load_workbook(workbook_path)
-        assert workbook["03 Execution"]["F2"].value == "DOCUMENTS_READY"
+        assert workbook["03 Execution"]["F2"].value == "Documents Ready"
         workbook.close()
     finally:
         service.close()

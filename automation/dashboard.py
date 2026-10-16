@@ -6,6 +6,7 @@ from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.utils import get_column_letter
+from .workbook import ensure_pipeline_column
 
 
 def dashboard_copy(source: Path, destination: Path) -> Path:
@@ -44,6 +45,7 @@ def dashboard_copy(source: Path, destination: Path) -> Path:
         sheet.add_data_validation(selector)
         sheet.cell(1, column).fill = PatternFill("solid", fgColor="D9EAD3")
         sheet.column_dimensions[letter].width = max(sheet.column_dimensions[letter].width or 12, 22)
+        ensure_pipeline_column(sheet)
         destination.parent.mkdir(parents=True, exist_ok=True)
         book.save(destination)
     finally:

@@ -10,7 +10,7 @@ from .private_repository import PrivateRepository, inside
 from .providers.apollo import ApolloAPIProvider, domain
 from .state import StateStore
 from .sync import normalize_company_name
-from .workbook import write_contacts
+from .workbook import write_contacts, update_pipeline_status
 
 
 def discover_contacts(config: dict[str, Any], repo: PrivateRepository, state: StateStore, *,
@@ -22,7 +22,7 @@ def discover_contacts(config: dict[str, Any], repo: PrivateRepository, state: St
     if not isinstance(per_company, int) or not 1 <= per_company <= 5:
         raise ValueError("apollo.max_contacts_per_company must be between 1 and 5")
     provider = provider or ApolloAPIProvider(config)
-    reveals, saved, waiting, files = 0, 0, [], []
+    reveals, saved, waiting, files, ready_ids = 0, 0, [], [], []
     for row in approved(config):
         folder = company_folder(repo.path, row.company_id, row.company)
         research = inside(folder, "inputs/research.json")
@@ -88,11 +88,15 @@ def discover_contacts(config: dict[str, Any], repo: PrivateRepository, state: St
         workbook_contacts = [{**c, "contact_status": "found" if c["email_status"] == "verified" else "unverified"}
                              for c in contacts if not c["suppressed"]]
         write_contacts(config["paths"]["workbook"], row.company_id, workbook_contacts[:5])
+        if any(c["email"] and c["email_status"] == "verified" and not c["suppressed"] for c in contacts):
+            ready_ids.append(row.company_id)
         files.append(write_json(inside(folder, "contacts.json"), {
             "company_id": row.company_id, "company": row.company, "domain": company_domain,
             "contacts": contacts,
         }))
     if files:
         repo.publish(files, "Publish approved company Apollo contacts")
+        for company_id in ready_ids:
+            update_pipeline_status(config["paths"]["workbook"], company_id, "Contacts Ready")
     return {"reveals": reveals, "contacts_saved": saved, "waiting": waiting,
             "next": "Ask ChatGPT to use contacts.json for final outreach and commit ready output manifests."}
