@@ -21,6 +21,11 @@ Install dependencies with `.venv/bin/python -m pip install -r requirements.txt`.
 
 ## Master automation engine
 
+For the private GitHub research/CV workflow, see [Private data workflow](docs/commands/private_exchange.md).
+Use `main.py exchange research`, `package`, `contacts`, then `deliver` to exchange work
+through the private `sa-anyan/japp_data` repository. These commands do not submit ChatGPT
+messages or read its responses. Final documents and emails are returned through GitHub.
+
 JAPP is Python-first, with Excel as the approval interface, SQLite for resumable workflow state, GitHub-tracked JSON as research input, and APScheduler for local monitoring. Integrations use replaceable providers. Defaults are intentionally non-live: AI uses an attended handoff, Apollo uses CSV import, mail uses a mock provider, and sending/automatic drafting are disabled.
 
 ```sh

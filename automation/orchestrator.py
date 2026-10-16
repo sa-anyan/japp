@@ -11,6 +11,7 @@ from .approvals import ApprovedCompany, eligible_companies, read_execution_rows
 from .contacts import import_apollo_file
 from .document_generation import DocumentValidationError, build_input_package, validate_docx
 from .github_research import pull_research_records
+from .handoff import SupervisedChatGPTHandoff
 from .state import StateStore
 from .sync import run_sync
 from .workbook import update_pipeline_status
@@ -54,7 +55,7 @@ def _find_output_documents(config: dict[str, Any], company_id: str,
         safe = __import__("automation.document_generation", fromlist=["safe_component"]).safe_component(company)
         folder = Path(config["paths"]["generated_dir"]) / f"{company_id}_{safe}"
     cvs = sorted(folder.glob("*_CV.docx")) if folder.is_dir() else []
-    letters = sorted(folder.glob("*_CoverLetter.docx")) if folder.is_dir() else []
+    letters = sorted(folder.glob("*_Cover Letter.docx")) if folder.is_dir() else []
     return (cvs[-1] if cvs else None, letters[-1] if letters else None)
 
 
@@ -118,16 +119,13 @@ def run_approved_queue(config: dict[str, Any], state: StateStore, *, dry_run: bo
                 update_pipeline_status(workbook_path, company.company_id, "APPLICATION_PACKAGE_READY")
                 package = build_input_package(company.company_id, config)
                 package_path = package["package_path"]
-                if _stop_requested(config):
+                if package["status"] != "ready_for_attended_handoff":
+                    update_pipeline_status(workbook_path, company.company_id, "AWAITING_USER_INPUTS")
+                elif _stop_requested(config):
                     break
-                step_pause = random_uniform(
-                    config["execution"]["min_step_pause_seconds"],
-                    config["execution"]["max_step_pause_seconds"],
-                )
-                if step_pause:
-                    sleep(step_pause)
-                state.transition(company.company_id, company.company, "AWAITING_AI_OUTPUT")
-                update_pipeline_status(workbook_path, company.company_id, "AWAITING_AI_OUTPUT")
+                else:
+                    state.transition(company.company_id, company.company, "AWAITING_AI_OUTPUT")
+                    update_pipeline_status(workbook_path, company.company_id, "AWAITING_AI_OUTPUT")
 
             cv_path, letter_path = _find_output_documents(config, company.company_id, company.company)
             if cv_path and letter_path:
@@ -171,7 +169,8 @@ def run_approved_queue(config: dict[str, Any], state: StateStore, *, dry_run: bo
     return {"planned": len(candidates), "processed": processed, "results": results, "written": True}
 
 
-def monitor_handoffs(config: dict[str, Any], state: StateStore) -> dict[str, int]:
+def monitor_handoffs(config: dict[str, Any], state: StateStore,
+                     handoff_service: SupervisedChatGPTHandoff | None = None) -> dict[str, int]:
     state.initialize()
     approvals = {
         row.company_id: row
@@ -184,7 +183,9 @@ def monitor_handoffs(config: dict[str, Any], state: StateStore) -> dict[str, int
         if _stop_requested(config):
             break
         company_id = company_state["company_id"]
-        if company_state["state"] not in {"AWAITING_AI_OUTPUT", "DOCUMENTS_READY", "CONTACTS_PENDING"}:
+        if company_state["state"] not in {
+            "APPLICATION_PACKAGE_READY", "AWAITING_AI_OUTPUT", "DOCUMENTS_READY", "CONTACTS_PENDING"
+        }:
             continue
         company = approvals.get(company_id)
         if company is None:
@@ -192,13 +193,36 @@ def monitor_handoffs(config: dict[str, Any], state: StateStore) -> dict[str, int
             cancelled += 1
             continue
         try:
-            cv_path, letter_path = _find_output_documents(config, company_id, company.company)
             current = state.get_company(company_id)
-            if cv_path and letter_path and current["state"] == "AWAITING_AI_OUTPUT":
-                validate_docx(cv_path, company.company)
-                validate_docx(letter_path, company.company)
+            if current and current["state"] == "APPLICATION_PACKAGE_READY" and handoff_service:
+                output_dir = Path(config["paths"]["generated_dir"]) / f"{company_id}_{__import__('automation.document_generation', fromlist=['safe_component']).safe_component(company.company)}"
+                package_path = output_dir / "input_package.json"
+                if not package_path.is_file():
+                    continue
+                package = __import__("json").loads(package_path.read_text(encoding="utf-8"))
+                if package.get("status") != "ready_for_attended_handoff":
+                    update_pipeline_status(config["paths"]["workbook"], company_id, "AWAITING_USER_INPUTS")
+                    continue
+                handoff_service.start_for_package({**package, "package_path": str(package_path), "output_dir": str(output_dir)})
+                state.transition(company_id, company.company, "AWAITING_AI_OUTPUT")
+                update_pipeline_status(config["paths"]["workbook"], company_id, "AWAITING_AI_OUTPUT")
+                current = state.get_company(company_id)
+
+            if current and current["state"] == "AWAITING_AI_OUTPUT" and handoff_service:
+                handoff_service.monitor_downloads()
+                current = state.get_company(company_id)
+
+            if current and current["state"] == "AWAITING_AI_OUTPUT" and not handoff_service:
+                cv_path, letter_path = _find_output_documents(config, company_id, company.company)
+                if cv_path and letter_path:
+                    validate_docx(cv_path, company.company)
+                    validate_docx(letter_path, company.company)
+                    state.transition(company_id, company.company, "DOCUMENTS_READY")
+                    update_pipeline_status(config["paths"]["workbook"], company_id, "DOCUMENTS_READY")
+                    current = state.get_company(company_id)
+
+            if current and current["state"] == "DOCUMENTS_READY":
                 state.transition(company_id, company.company, "DOCUMENTS_READY")
-                update_pipeline_status(config["paths"]["workbook"], company_id, "DOCUMENTS_READY")
                 current = state.get_company(company_id)
             if current and current["state"] == "DOCUMENTS_READY":
                 state.transition(company_id, company.company, "CONTACTS_PENDING")

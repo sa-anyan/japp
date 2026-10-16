@@ -22,6 +22,8 @@ DEFAULTS: dict[str, Any] = {
         "database": "data/state/japp.sqlite",
         "backup_dir": "backups",
         "generated_dir": "data/generated",
+        "downloads_dir": "~/Downloads",
+        "private_repo_dir": "data/private_repo",
         "contacts_dir": "data/contacts",
         "apollo_import_dir": "automation/imports/apollo",
         "logs_dir": "logs",
@@ -53,7 +55,9 @@ DEFAULTS: dict[str, Any] = {
         ],
     },
     "ai": {"provider": "manual"},
-    "apollo": {"provider": "csv", "reveal_emails": False, "max_reveals_per_run": 0},
+    "exchange": {"repository": "sa-anyan/japp_data", "branch": "main"},
+    "apollo": {"provider": "csv", "reveal_emails": False, "max_reveals_per_run": 0,
+               "api_key_env": "APOLLO_API_KEY", "max_contacts_per_company": 5},
     "mail": {
         "provider": "mock",
         "auto_draft": False,
@@ -120,6 +124,8 @@ def load_config(path: Path | str | None = None) -> dict[str, Any]:
         raise ValueError("mail.provider must be mock, outlook, or gmail")
     if config["mail"]["daily_send_limit"] < 1:
         raise ValueError("mail.daily_send_limit must be positive")
+    if not isinstance(config["apollo"]["max_contacts_per_company"], int) or not 1 <= config["apollo"]["max_contacts_per_company"] <= 5:
+        raise ValueError("apollo.max_contacts_per_company must be between 1 and 5")
     for section, minimum_key, maximum_key in (
         ("execution", "min_step_pause_seconds", "max_step_pause_seconds"),
         ("execution", "min_company_pause_seconds", "max_company_pause_seconds"),

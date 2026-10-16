@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import json
 import random
 import re
 import time
@@ -24,6 +25,30 @@ from .workbook import (
 
 class BatchSafetyError(RuntimeError):
     pass
+
+
+def validate_final_outreach(payload: dict[str, Any], contacts: list[dict[str, Any]]) -> dict[str, dict[str, str]]:
+    """Validate final AI-returned copy, never treat a writing prompt as an email."""
+    if not isinstance(payload, dict) or not isinstance(payload.get("messages"), list) or not payload["messages"]:
+        raise BatchSafetyError("outreach.json must contain a non-empty messages array")
+    verified = {c["email"].strip().casefold() for c in contacts
+                if c.get("email") and c["email_status"] == "verified" and not c.get("suppressed")}
+    result = {}
+    for message in payload["messages"]:
+        if not isinstance(message, dict) or any(not isinstance(message.get(k), str) or not message[k].strip()
+                                                for k in ("recipient", "subject", "body")):
+            raise BatchSafetyError("Every final email requires recipient, subject and body")
+        email = message["recipient"].strip().casefold()
+        if email not in verified or email in result:
+            raise BatchSafetyError("Final email recipient is duplicated, unknown, suppressed or unverified")
+        if "\n" in message["subject"] or "\r" in message["subject"]:
+            raise BatchSafetyError("Email subjects must be single-line")
+        content = message["subject"] + "\n" + message["body"]
+        if re.search(r"\{[a-zA-Z_][^{}\n]*\}|\[(?:recipient|company|hook|the pitch|value proposition|call to action|linkedin|portfolio|verified|your|name)[^\]]*\]",
+                     content, re.IGNORECASE):
+            raise BatchSafetyError("Final outreach contains unresolved prompt placeholders")
+        result[email] = {key: message[key].strip() for key in ("subject", "body")}
+    return result
 
 
 def _read_template(path: Path) -> str:
@@ -64,6 +89,8 @@ def _assets_for_company(config: dict[str, Any], company_id: str, company: str) -
     cv_path, letter_path = cv_files[-1], letter_files[-1]
     validate_docx(cv_path, company)
     validate_docx(letter_path, company)
+    if (folder / "outreach.json").is_file():
+        return [cv_path, letter_path], ""
     intro_path = folder / "introduction.md"
     if not intro_path.is_file():
         raise BatchSafetyError(f"Manual AI introduction is missing: {intro_path}")
@@ -76,7 +103,7 @@ def _assets_for_company(config: dict[str, Any], company_id: str, company: str) -
 def create_email_batch(config: dict[str, Any], state: StateStore,
                        *, company_ids: set[str] | None = None) -> dict[str, Any]:
     approved = eligible_companies(config["paths"]["workbook"], config["paths"]["registry"])
-    template = _read_template(Path(config["paths"]["prompts_dir"]) / "outreach_template.md")
+    template = None
     messages = []
     skipped: list[str] = []
     contacts = state.list_contacts()
@@ -101,6 +128,11 @@ def create_email_batch(config: dict[str, Any], state: StateStore,
             continue
         try:
             attachments, introduction = _assets_for_company(config, company_id, company)
+            folder = Path(config["paths"]["generated_dir"]) / f"{company_id}_{safe_component(company)}"
+            final_path = folder / "outreach.json"
+            final_copy = validate_final_outreach(json.loads(final_path.read_text(encoding="utf-8")), company_contacts) if final_path.is_file() else None
+            if final_copy is None and template is None:
+                template = _read_template(Path(config["paths"]["prompts_dir"]) / "outreach_template.md")
         except (BatchSafetyError, DocumentValidationError) as exc:
             skipped.append(f"{company_id}: {exc}")
             continue
@@ -115,8 +147,15 @@ def create_email_batch(config: dict[str, Any], state: StateStore,
                 "role": contact["role"],
                 "introduction": introduction,
             }
-            body = _render(template, values)
-            subject = config["mail"]["subject_template"].format(**values)
+            if final_copy is not None:
+                copy = final_copy.get(contact["email"].strip().casefold())
+                if copy is None:
+                    skipped.append(f"{company_id}: no final outreach for contact {contact['contact_id']}")
+                    continue
+                body, subject = copy["body"], copy["subject"]
+            else:
+                body = _render(template, values)
+                subject = config["mail"]["subject_template"].format(**values)
             identity = stable_hash([
                 company_id,
                 contact["contact_id"],

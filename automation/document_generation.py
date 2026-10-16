@@ -14,6 +14,7 @@ from docx import Document
 PLACEHOLDER_MARKERS = (
     "<!-- add your prompt here -->",
     "add your own prompt here",
+    "add your own proposal/introduction prompt here",
     "TODO: add your own prompt",
 )
 PROMPT_FIELDS = {"company", "role", "job_description", "research_summary"}
@@ -56,7 +57,7 @@ def _prompt(path: Path) -> str | None:
     if not path.is_file():
         return None
     content = path.read_text(encoding="utf-8").strip()
-    if not content or any(marker in content.casefold() for marker in PLACEHOLDER_MARKERS):
+    if not content or any(marker.casefold() in content.casefold() for marker in PLACEHOLDER_MARKERS):
         return None
     return content
 

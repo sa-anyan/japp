@@ -21,6 +21,7 @@ from automation.document_generation import (
 )
 from automation.engine import InstanceAlreadyRunning, SingleInstanceLock, request_stop, start_engine
 from automation.github_research import DirtyResearchTree, pull_research_records
+from automation.handoff import SupervisedChatGPTHandoff, classify_document, snapshot_downloads
 from automation.orchestrator import import_pending_contacts, run_approved_queue
 from automation.outreach import (
     BatchSafetyError,
@@ -293,6 +294,76 @@ def test_docx_validation_checks_company_and_role(tmp_path):
         validate_docx(path, "Example Energy", "Director")
     generated = save_text_as_docx("Company-specific text exactly as returned.", tmp_path / "text.docx")
     assert validate_docx(generated, "Company-specific")["bytes"] > 0
+
+
+def test_supervised_handoff_opens_ui_and_auto_files_new_validated_downloads(tmp_path):
+    workbook_path = tmp_path / "dashboard.xlsx"
+    make_dashboard(workbook_path, approvals=((2, "Example Energy", "Approved", "Start"),))
+    config = make_config(tmp_path, workbook_path)
+    write_research(config)
+    config["paths"]["master_cv"] = tmp_path / "master-cv.docx"
+    make_doc(config["paths"]["master_cv"], "Samuel Anyan master CV")
+    cv_prompt = config["paths"]["prompts_dir"] / "cv_tailoring_prompt.md"
+    proposal_prompt = config["paths"]["prompts_dir"] / "proposal_prompt.md"
+    cv_prompt.write_text("Tailor for {company}; research {research_summary}", encoding="utf-8")
+    proposal_prompt.write_text("Proposal for {company}: {research_summary}", encoding="utf-8")
+    downloads = tmp_path / "Downloads"
+    downloads.mkdir()
+    old_doc = downloads / "old.docx"
+    make_doc(old_doc, "Example Energy old CV Experience Education Skills")
+    config["paths"]["downloads_dir"] = downloads
+    config["paths"]["database"] = tmp_path / "state.sqlite"
+    state = StateStore(config["paths"]["database"])
+    state.initialize()
+    state.transition(2, "Example Energy", "RESEARCH_READY")
+    state.transition(2, "Example Energy", "PENDING_APPROVAL")
+    state.transition(2, "Example Energy", "APPROVED")
+    state.transition(2, "Example Energy", "APPLICATION_PACKAGE_READY")
+    state.transition(2, "Example Energy", "AWAITING_AI_OUTPUT")
+    package = build_input_package(2, config, role="Speculative Approach")
+    opened_urls = []
+    opened_files = []
+    service = SupervisedChatGPTHandoff(
+        config, state, browser_open=opened_urls.append, open_file=opened_files.append, stable_polls=2
+    )
+    try:
+        session = service.start_for_package(package)
+        assert session and session["company_id"] == "2"
+        assert opened_urls[0] == "https://chatgpt.com/"
+        assert "127.0.0.1" in opened_urls[1]
+        page = service._render_page(state.active_handoff())
+        assert "Copy CV prompt" in page and "Copy proposal prompt" in page
+        assert "Open master CV" in page and "does not submit messages" in page
+        service.open_file(config["paths"]["master_cv"])
+        assert opened_files == [config["paths"]["master_cv"]]
+
+        cv_download = downloads / "Document.docx"
+        letter_download = downloads / "Document (1).docx"
+        make_doc(cv_download, "Example Energy Professional Experience Education Technical Skills")
+        assert service.monitor_downloads()["completed"] is False
+        assert service.monitor_downloads()["completed"] is False
+        make_doc(letter_download, "Dear Hiring Team, Example Energy. I am writing about the opportunity. Kind regards.")
+        assert service.monitor_downloads()["completed"] is False
+        assert service.monitor_downloads()["completed"] is True
+
+        output = config["paths"]["generated_dir"] / "2_Example Energy"
+        filed = {path.name for path in output.glob("*.docx")}
+        assert "Samuel Anyan_Example Energy_Speculative Approach_CV.docx" in filed
+        assert "Samuel Anyan_Example Energy_Speculative Approach_Cover Letter.docx" in filed
+        assert old_doc.exists()
+        assert not cv_download.exists() and not letter_download.exists()
+        assert state.get_handoff(2)["status"] == "completed"
+        assert state.get_company(2)["state"] == "DOCUMENTS_READY"
+        workbook = load_workbook(workbook_path)
+        assert workbook["03 Execution"]["F2"].value == "DOCUMENTS_READY"
+        workbook.close()
+    finally:
+        service.close()
+
+
+def test_download_classifier_fails_closed_for_ambiguous_document():
+    assert classify_document(Path("document.docx"), "Example Energy consultant information.") is None
+    assert snapshot_downloads(Path("/path/that/does/not/exist")) == {}
 
 
 def test_apollo_csv_import_filters_identity_and_ranks_verified_contacts(tmp_path):

@@ -145,6 +145,36 @@ class StateStore:
                     last_finished_at TEXT,
                     last_error TEXT
                 );
+                CREATE TABLE IF NOT EXISTS handoffs (
+                    company_id TEXT PRIMARY KEY,
+                    company_name TEXT NOT NULL,
+                    session_token TEXT NOT NULL,
+                    package_path TEXT NOT NULL,
+                    output_dir TEXT NOT NULL,
+                    master_cv_path TEXT NOT NULL,
+                    downloads_dir TEXT NOT NULL,
+                    download_baseline TEXT NOT NULL,
+                    prompt_text TEXT NOT NULL,
+                    proposal_text TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    started_at TEXT NOT NULL,
+                    completed_at TEXT,
+                    cv_path TEXT,
+                    cover_letter_path TEXT,
+                    last_error TEXT
+                );
+                CREATE TABLE IF NOT EXISTS enrichments (
+                    person_id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    payload TEXT,
+                    updated_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS exchange_inputs (
+                    company_id TEXT PRIMARY KEY,
+                    input_hash TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
                 """
             )
 
@@ -430,3 +460,113 @@ class StateStore:
                 (action, day),
             ).fetchone()
         return int(row["count"])
+
+    def enrichment(self, person_id: str) -> dict[str, Any] | None:
+        with self._connect() as db:
+            row = db.execute("SELECT * FROM enrichments WHERE person_id=?", (person_id,)).fetchone()
+        if not row:
+            return None
+        result = dict(row)
+        result["payload"] = json.loads(result["payload"]) if result["payload"] else None
+        return result
+
+    def published_input_hash(self, company_id: str) -> str | None:
+        with self._connect() as db:
+            row = db.execute("SELECT input_hash FROM exchange_inputs WHERE company_id=?", (company_id,)).fetchone()
+        return row[0] if row else None
+
+    def save_input_hash(self, company_id: str, input_hash: str) -> None:
+        with self._connect() as db:
+            db.execute("INSERT INTO exchange_inputs VALUES(?,?,?) ON CONFLICT(company_id) DO UPDATE "
+                       "SET input_hash=excluded.input_hash,updated_at=excluded.updated_at",
+                       (company_id, input_hash, utc_now()))
+
+    def reserve_enrichment(self, person_id: str) -> bool:
+        with self._connect() as db:
+            cursor = db.execute(
+                "INSERT OR IGNORE INTO enrichments(person_id,status,updated_at) VALUES(?,'pending',?)",
+                (person_id, utc_now()),
+            )
+            return cursor.rowcount == 1
+
+    def finish_enrichment(self, person_id: str, payload: dict[str, Any]) -> None:
+        with self._connect() as db:
+            db.execute("UPDATE enrichments SET status='completed',payload=?,updated_at=? WHERE person_id=?",
+                       (json.dumps(payload), utc_now(), person_id))
+
+    @staticmethod
+    def _handoff_dict(row: sqlite3.Row) -> dict[str, Any]:
+        result = dict(row)
+        result["download_baseline"] = json.loads(result["download_baseline"])
+        return result
+
+    def active_handoff(self) -> dict[str, Any] | None:
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT * FROM handoffs WHERE status='waiting' ORDER BY started_at LIMIT 1"
+            ).fetchone()
+        return self._handoff_dict(row) if row else None
+
+    def get_handoff(self, company_id: int | str) -> dict[str, Any] | None:
+        with self._connect() as db:
+            row = db.execute("SELECT * FROM handoffs WHERE company_id=?", (str(company_id),)).fetchone()
+        return self._handoff_dict(row) if row else None
+
+    def create_handoff(self, *, company_id: int | str, company_name: str,
+                       session_token: str, package_path: str, output_dir: str,
+                       master_cv_path: str, downloads_dir: str,
+                       download_baseline: dict[str, Any], prompt_text: str,
+                       proposal_text: str, role: str) -> dict[str, Any]:
+        company_key = str(company_id)
+        with self._connect() as db:
+            active = db.execute(
+                "SELECT company_id FROM handoffs WHERE status='waiting' AND company_id!=? LIMIT 1",
+                (company_key,),
+            ).fetchone()
+            if active:
+                raise ValueError(f"Company {active['company_id']} already has an active document handoff")
+            db.execute(
+                """INSERT INTO handoffs(company_id,company_name,session_token,package_path,
+                   output_dir,master_cv_path,downloads_dir,download_baseline,prompt_text,
+                   proposal_text,role,status,started_at)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?,'waiting',?)
+                   ON CONFLICT(company_id) DO UPDATE SET company_name=excluded.company_name,
+                     session_token=excluded.session_token,package_path=excluded.package_path,
+                     output_dir=excluded.output_dir,master_cv_path=excluded.master_cv_path,
+                     downloads_dir=excluded.downloads_dir,download_baseline=excluded.download_baseline,
+                     prompt_text=excluded.prompt_text,proposal_text=excluded.proposal_text,
+                     role=excluded.role,status='waiting',started_at=excluded.started_at,
+                     completed_at=NULL,cv_path=NULL,cover_letter_path=NULL,last_error=NULL""",
+                (company_key, company_name, session_token, package_path, output_dir,
+                 master_cv_path, downloads_dir, json.dumps(download_baseline, sort_keys=True),
+                 prompt_text, proposal_text, role, utc_now()),
+            )
+            self._record_event(db, "document_handoff_started", company_key, {"package": package_path})
+        return self.get_handoff(company_key)
+
+    def finish_handoff(self, company_id: int | str, *, cv_path: str | None = None,
+                       cover_letter_path: str | None = None, error: str | None = None) -> None:
+        with self._connect() as db:
+            db.execute(
+                """UPDATE handoffs SET status=?,completed_at=?,cv_path=?,cover_letter_path=?,last_error=?
+                   WHERE company_id=?""",
+                ("failed" if error else "completed", utc_now(), cv_path, cover_letter_path,
+                 error, str(company_id)),
+            )
+            self._record_event(
+                db, "document_handoff_failed" if error else "document_handoff_completed",
+                str(company_id), {"error": error, "cv_path": cv_path, "cover_letter_path": cover_letter_path},
+            )
+
+    def set_handoff_error(self, company_id: int | str, error: str | None) -> None:
+        with self._connect() as db:
+            db.execute(
+                "UPDATE handoffs SET last_error=? WHERE company_id=? AND status='waiting'",
+                (error, str(company_id)),
+            )
+            self._record_event(db, "document_handoff_notice", str(company_id), {"message": error})
+
+    def list_handoffs(self) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            rows = db.execute("SELECT * FROM handoffs ORDER BY started_at DESC").fetchall()
+        return [self._handoff_dict(row) for row in rows]
