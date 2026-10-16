@@ -22,6 +22,29 @@ HARD RULES
 - G4 If any requirement cannot be met, state the trade-off. Never omit silently.
 - G5 Never claim an externally verified ATS score. Report calculated competency coverage separately from any ATS score.
 - G6 After producing output, audit it line by line against this whole spec.
+- G7 PROOF OF VALUE: review the entire master CV before selecting evidence. Employment
+  does not outrank independent tools, automation, university projects, awards or scholarships.
+  Never default to LNG work. Select the strongest relevant proof for this company.
+- G8 CONCRETE IMPROVEMENT: for each selected achievement explain what Samuel built or
+  changed, how it worked, and what improved. Use evidenced money/time savings, reduced
+  manual work, improved comparisons, clearer decisions or other concrete results. A
+  working tool is valid evidence without an invented saving. Distinguish realised
+  savings, modelled results and intended benefits. Never invent a metric to fit a pattern.
+- G9 INTEGRATED RECOGNITION: use relevant design/presentation awards, academic results
+  and scholarships where they demonstrate the capability being discussed, alongside
+  the associated project or achievement when supported. A scholarship does not by itself
+  prove technical performance or savings. Keep relevant recognition in Achievements too
+  when useful, without mechanically repeating it everywhere.
+- G10 INSPECTABLE WORK: name the relevant project, automation or tool. Use a verified
+  direct project link supplied in the master CV/evidence where available, otherwise
+  the portfolio homepage. Do not invent project URLs or claim a planned tool is built.
+- G11 SPECIFIC INTEREST: show interest through the company's documented activity and
+  a concrete, achievable contribution Samuel could build, model, improve or automate.
+  Connect company activity -> proposed improvement -> completed work -> evidenced
+  result/recognition -> inspectable example. Never assert an unknown broken workflow.
+- G12 EXACTLY ONE PAGE: the final CV must render to exactly one A4 page and make full,
+  balanced use of its usable height. A sparse half-page or two-thirds-page CV fails
+  even if the file technically has one page. Follow the expansion/reduction loop in M8.
 
 ---
 
@@ -120,6 +143,13 @@ TASK: conduct detailed research and return:
 ## M5 - SELECT AND RANK EVIDENCE
 
 - Analyse all master-CV experience and projects. Select those directly relevant to the role, the company, and its projects, cause or values (use M4).
+- Build an evidence-selection table covering employment, independent tools/automation,
+  academic projects and relevant awards/scholarships. Rank by company relevance,
+  demonstrated improvement, evidence strength and availability of an inspectable example.
+  Select one primary proof of value and supporting evidence as space allows. Explain
+  why the lead evidence wins; do not select an employment example merely because it is a job.
+- Give relevant built automation, website/portfolio tools and modelling projects
+  meaningful space. State their actual function and improvement, not just their names.
 - Rewrite them using the section structures below, working in word-bank terms. A term may appear once or twice in the CV. What matters is that it is covered and evidenced.
 - Rank by alignment: high-weight terms and HIGH-priority (Essential/Required/Looking-for) terms rank first.
 
@@ -236,6 +266,22 @@ After the Professional Summary, order the remaining sections by how strongly the
 
 Priority: a clean one-page layout is the main priority. Content is tailored to fit it.
 
+One-page completion loop (mandatory):
+1. Render the actual final DOCX and inspect the page image. Exactly one page is required.
+2. If the page is underfilled, add the next strongest relevant master-CV project,
+   improvement, evidenced result, recognition or supporting experience. Expand terse
+   bullets with useful methods, scope and outcomes before adding weaker material.
+3. Aim for the final content to finish within the last 10% of the usable text area,
+   with normal visual breathing room and balanced section spacing. Measure the rendered
+   content extent, not the number of paragraphs or a hidden page-count property.
+4. If content overflows, remove the weakest or repeated evidence and tighten wording.
+   Use only the allowed spacing ranges. Never shrink the specified font sizes or margins.
+5. Do not stretch content using oversized gaps, blank paragraphs, forced line breaks,
+   repetition, generic filler or invented achievements. Preserve the specified layout.
+6. Rerender after each change until page count, density and readability all pass.
+   If the evidence genuinely cannot fill the page without violating accuracy or layout,
+   disclose that exception and keep the document a review draft rather than claim success.
+
 ```yaml
 page:
   size_limit: 1 page
@@ -320,6 +366,9 @@ Do not generate the final CV until every check passes.
 4. Formatting
    - Matches M8 exactly: page setup, typography, margins, spacing, section structure.
    - Fits one page without hurting readability.
+   - Exactly one rendered page, with the last content in the final 10% of the usable
+     text area; no large unused lower section or artificial padding. Record actual
+     page count, content extent and visual inspection in the separate audit.
    - Hyperlinks work.
 5. Approval
    - Generate the CV only after all checks pass.
@@ -356,6 +405,26 @@ R5 what is extremely important to them and would not read as flattery (e.g. an o
 
 ### O3 EMAIL
 Candidate is entry level. The reference letter (10-year bank manager) shows structure only; never copy its content.
+Apply G7–G11. The evidence-first structure below replaces the generic P1–P3 skeleton
+that follows wherever they differ; the skeleton illustrates tone only.
+
+1. Lead with the strongest relevant named project, tool, automation or achievement,
+   explaining what was built/changed and the evidenced improvement. Do not default
+   to LNG, start with a generic degree introduction, or list disconnected skills.
+2. Establish credibility with the concrete method/result and any relevant award,
+   scholarship or recognition. Use one primary example and at most one useful supporting
+   example. Never equate modelled ROI with realised savings or invent time saved.
+3. Connect that evidence to a documented company activity and one specific contribution
+   Samuel could build. Explain what could improve and propose validating the need with
+   the team when internal workflows are unknown. Avoid generic offers to "add value".
+4. Include a verified project link where supplied, otherwise the portfolio homepage,
+   so the recipient can inspect the work. Use a full https:// URL in plain-text emails.
+5. End with an easy invitation to discuss the concrete idea. Mention the attached CV
+   and proposal only when actually included. For manual LinkedIn messages, offer to
+   share them instead of claiming they are attached. No invented personalisation or flattery.
+
+Evidence selection and company relevance must be specific to each recipient; do not reuse
+the same LNG paragraph across a batch simply because a saving figure is available.
 ```
 Dear [Name]
 
@@ -373,6 +442,11 @@ Sincerely,
 ```
 
 ### O4 PROPOSAL (speculative applications)
+Apply G7–G11: identify the documented activity and proposed improvement, name the small
+deliverable, connect it to a completed relevant project and its evidenced result or
+recognition, and explain how usefulness would be measured. Demonstrate genuine interest
+through a practical build/automation plan, not praise. Distinguish an observed problem
+from a hypothesis to test. Use a verified example/portfolio link and preserve the 250-word cap.
 ```
 length   : <= 250 words including salutation and addresses
 layout   : clean, professional, McKinsey-level
