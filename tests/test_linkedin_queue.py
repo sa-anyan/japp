@@ -22,7 +22,7 @@ def test_named_documents_and_later_verified_email(setup_exchange):
     assert book['05 LinkedIn']['H2'].value.endswith('_CV.docx')
     book.close()
     state.save_contact('2', 'Example Energy', full_name='A Person', email='a@example.com',
-                       linkedin_url=profile, email_status='verified')
+                       linkedin_url=profile.replace('www.', 'uk.'), email_status='verified')
     refresh_linkedin_queue(config, state)
     book = load_workbook(config['paths']['workbook'])
     assert book['05 LinkedIn']['K2'].value == 'Email available'

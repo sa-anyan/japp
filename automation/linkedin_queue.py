@@ -63,7 +63,7 @@ def refresh_linkedin_queue(config, state: StateStore):
             folder = folders[0]; output = folder / 'outputs'
             leads = _read(root / 'research/contact_candidates' / f'{company.company_id}.json')
             people = state.list_contacts(company.company_id)
-            verified_profiles = {_profile(p.get('linkedin_url')).rstrip('/').casefold() for p in people
+            verified_profiles = {urlparse(_profile(p.get('linkedin_url'))).path.rstrip('/').casefold() for p in people
                                  if p.get('email') and p.get('email_status') == 'verified'} - {''}
             people += [dict(x, full_name=x.get('full_name', '')) for x in
                        leads.get('candidates', []) + leads.get('unverified_people', [])]
@@ -74,7 +74,7 @@ def refresh_linkedin_queue(config, state: StateStore):
                 if not name or key in seen: continue
                 seen.add(key)
                 if person.get('email') and person.get('email_status') == 'verified': continue
-                if _profile(person.get('linkedin_url')).rstrip('/').casefold() in verified_profiles: continue
+                if urlparse(_profile(person.get('linkedin_url'))).path.rstrip('/').casefold() in verified_profiles: continue
                 r = existing.get(key) or sheet.max_row + 1
                 old = [sheet.cell(r, col).value for col in range(1, len(HEADERS)+1)]
                 profile = _profile(person.get('linkedin_url'))
@@ -117,7 +117,7 @@ def refresh_linkedin_queue(config, state: StateStore):
                 execution.cell(erow, status_col, 'Email available')
             for rr in range(2, sheet.max_row + 1):
                 if (str(sheet.cell(rr, 1).value) == company.company_id
-                        and _profile(sheet.cell(rr, 5).value).rstrip('/').casefold() in verified_profiles
+                        and urlparse(_profile(sheet.cell(rr, 5).value)).path.rstrip('/').casefold() in verified_profiles
                         and sheet.cell(rr, 11).value not in MANUAL):
                     sheet.cell(rr, 6, 'Verified email available')
                     sheet.cell(rr, 10, '')
