@@ -376,3 +376,9 @@ def test_cv_identity_is_required_but_target_company_is_not(tmp_path):
     make_doc(cv, 'Another Person Professional Experience Education Skills')
     with pytest.raises(DocumentValidationError, match='identity'):
         validate_docx(cv, 'Target Company', document_kind='cv')
+
+
+@pytest.mark.parametrize('role', ['', 'Speculative', 'Speculative Approach', 'speculative_approach'])
+def test_recipient_filenames_omit_internal_speculative_label(role):
+    assert expected_filename('Evinox Energy', role, 'CV') == 'Samuel Anyan_Evinox Energy_CV.docx'
+    assert expected_filename('Evinox Energy', role, 'Cover Letter') == 'Samuel Anyan_Evinox Energy_Proposal.docx'

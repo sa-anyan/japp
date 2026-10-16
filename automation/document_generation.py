@@ -39,6 +39,9 @@ def expected_filename(company: str, role: str, kind: str) -> str:
         kind = "Cover Letter"
     if kind not in {"CV", "Cover Letter"}:
         raise ValueError("kind must be CV or Cover Letter")
+    if not role.strip() or re.sub(r"[_ -]+", " ", role.strip().casefold()) in {"speculative", "speculative approach"}:
+        suffix = "Proposal" if kind == "Cover Letter" else "CV"
+        return f"Samuel Anyan_{safe_component(company)}_{suffix}.docx"
     return f"Samuel Anyan_{safe_component(company)}_{safe_component(role)}_{kind}.docx"
 
 

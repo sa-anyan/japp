@@ -344,8 +344,8 @@ def test_supervised_handoff_opens_ui_and_auto_files_new_validated_downloads(tmp_
 
         output = config["paths"]["generated_dir"] / "2_Example Energy"
         filed = {path.name for path in output.glob("*.docx")}
-        assert "Samuel Anyan_Example Energy_Speculative Approach_CV.docx" in filed
-        assert "Samuel Anyan_Example Energy_Speculative Approach_Cover Letter.docx" in filed
+        assert "Samuel Anyan_Example Energy_CV.docx" in filed
+        assert "Samuel Anyan_Example Energy_Proposal.docx" in filed
         assert old_doc.exists()
         assert not cv_download.exists() and not letter_download.exists()
         assert state.get_handoff(2)["status"] == "completed"

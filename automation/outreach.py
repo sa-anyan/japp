@@ -64,7 +64,7 @@ def _assets_for_company(config: dict[str, Any], company_id: str, company: str) -
     if not folder.is_dir():
         raise BatchSafetyError(f"Generated document folder is missing for company {company_id}")
     cv_files = sorted(folder.glob("*_CV.docx"))
-    letter_files = sorted(folder.glob("*_Cover Letter.docx"))
+    letter_files = sorted(folder.glob("*_Proposal.docx")) or sorted(folder.glob("*_Cover Letter.docx"))
     if not cv_files or not letter_files:
         raise BatchSafetyError(f"CV and cover letter are required before drafting for {company_id}")
     cv_path, letter_path = cv_files[-1], letter_files[-1]

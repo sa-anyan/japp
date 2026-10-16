@@ -56,6 +56,13 @@ master_cv.docx, research.json, all prompts, and TASK.md. Read contacts.json besi
 when available. Never infer candidate credentials from company research.
 Write final files under the sibling outputs folder. The filenames may be anything:
 JAPP validates, renames and files them locally. Do not modify inputs.
+Recipient-facing filenames must never include "Speculative", "Speculative Approach",
+"speculative_approach" or other internal workflow labels. Without an advertised role,
+use "Samuel Anyan_<Company>_CV.docx" and "Samuel Anyan_<Company>_Proposal.docx".
+For advertised roles use "Samuel Anyan_<Company>_<Job title>_CV.docx" and
+"Samuel Anyan_<Company>_<Job title>_Cover Letter.docx". Keep the speculative
+classification only in internal metadata. The manifest field remains cover_letter
+even when its attachment is a proposal.
 
 Write outputs/outreach.json as {"messages": [{"recipient": "verified work email",
 "subject": "final subject", "body": "final plain-text email"}]}.
@@ -110,7 +117,10 @@ Generate a CV DOCX and use the sole cv_tailoring_prompt.md optional modules O1â€
 for the requested proposal/cover-letter DOCX and email, using contacts.json. Never send them.
 If contacts have not arrived, prepare the documents and wait to finalise outreach/manifest.
 The workflow explicitly requests both the proposal/cover letter and email. Follow the
-modular prompt's 250-word maximum, including salutation and addresses. Save the CV
+README's recipient-facing filename rule: no "Speculative Approach" or internal workflow
+labels in filenames. Use company-only CV/Proposal names when no advertised role exists.
+The exact modular writing prompt remains unchanged; this is a packaging rule.
+Follow the modular prompt's 250-word maximum, including salutation and addresses. Save the CV
 audit separately as outputs/cv_audit.md; do not insert audit tables into the final CV.
 Follow the private repository README's output contract exactly. Copy input_hash from
 input_package.json to the output manifest so stale results cannot enter the mailing workflow.
