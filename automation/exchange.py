@@ -300,7 +300,8 @@ def collect_outputs(config: dict[str, Any], repo: PrivateRepository, state: Stat
         outreach = inside(output, manifest["outreach"])
         role = package["role"]
         for doc in (cv, letter):
-            validate_docx(doc, row.company, role if package["opportunity_type"] == "advertised_vacancy" else "")
+            validate_docx(doc, row.company, role if package["opportunity_type"] == "advertised_vacancy" else "",
+                          document_kind="cv" if doc == cv else "letter")
         messages = json.loads(outreach.read_text(encoding="utf-8"))
         from .outreach import validate_final_outreach
         validate_final_outreach(messages, state.list_contacts(row.company_id))

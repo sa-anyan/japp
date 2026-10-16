@@ -60,7 +60,7 @@ def finish_outputs(config, repo, state):
     from automation.workbook import write_contacts
     write_contacts(config["paths"]["workbook"], "2", [{"full_name": "A Person", "role": "Hiring Manager",
                     "email": "person@example.test", "email_status": "verified", "contact_status": "found"}])
-    make_doc(folder / "outputs/random.docx", "Example Energy Professional Experience Education Skills")
+    make_doc(folder / "outputs/random.docx", "Samuel Anyan Professional Experience Education Skills")
     make_doc(folder / "outputs/download (2).docx", "Dear Example Energy, I am writing. Kind regards.")
     write_json(folder / "outputs/outreach.json", {"messages": [{"recipient": "person@example.test",
                "subject": "An introduction to Example Energy", "body": "Hi A,\nI would welcome a conversation.\nSamuel"}]})
@@ -364,3 +364,15 @@ def test_dashboard_cli_activates_only_new_copy(setup_exchange, monkeypatch, tmp_
     assert saved["paths"]["workbook"] == str(destination)
     assert saved["mail"]["send_enabled"] is False
     assert config["paths"]["workbook"].read_bytes() == original
+
+
+def test_cv_identity_is_required_but_target_company_is_not(tmp_path):
+    from automation.document_generation import validate_docx, DocumentValidationError
+    cv = tmp_path / 'cv.docx'
+    make_doc(cv, 'Samuel Anyan Professional Experience Education Skills')
+    assert validate_docx(cv, 'Target Company', document_kind='cv')
+    with pytest.raises(DocumentValidationError, match='company'):
+        validate_docx(cv, 'Target Company')
+    make_doc(cv, 'Another Person Professional Experience Education Skills')
+    with pytest.raises(DocumentValidationError, match='identity'):
+        validate_docx(cv, 'Target Company', document_kind='cv')

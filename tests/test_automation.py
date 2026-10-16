@@ -143,7 +143,7 @@ def prepare_outreach(tmp_path: Path, contact_count=1):
     config = make_config(tmp_path, workbook_path)
     output = config["paths"]["generated_dir"] / "2_Example Energy"
     output.mkdir(parents=True)
-    make_doc(output / "Samuel Anyan_Example Energy_Speculative Approach_CV.docx", "Example Energy analyst CV")
+    make_doc(output / "Samuel Anyan_Example Energy_Speculative Approach_CV.docx", "Samuel Anyan analyst CV Education Skills")
     make_doc(output / "Samuel Anyan_Example Energy_Speculative Approach_Cover Letter.docx", "Example Energy introduction")
     (output / "introduction.md").write_text("I would be glad to discuss a practical scenario model.", encoding="utf-8")
     (output / "outreach.json").write_text(json.dumps({"messages": [

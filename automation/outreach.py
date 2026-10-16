@@ -68,7 +68,7 @@ def _assets_for_company(config: dict[str, Any], company_id: str, company: str) -
     if not cv_files or not letter_files:
         raise BatchSafetyError(f"CV and cover letter are required before drafting for {company_id}")
     cv_path, letter_path = cv_files[-1], letter_files[-1]
-    validate_docx(cv_path, company)
+    validate_docx(cv_path, company, document_kind="cv")
     validate_docx(letter_path, company)
     if (folder / "outreach.json").is_file():
         return [cv_path, letter_path], ""

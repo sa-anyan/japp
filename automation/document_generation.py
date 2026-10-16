@@ -149,7 +149,7 @@ def build_input_package(company_id: int | str, config: dict[str, Any], *, role: 
     return package
 
 
-def validate_docx(path: Path | str, company: str, role: str = "") -> dict[str, Any]:
+def validate_docx(path: Path | str, company: str, role: str = "", *, document_kind: str = "letter") -> dict[str, Any]:
     path = Path(path)
     if path.suffix.casefold() != ".docx" or not path.is_file() or path.stat().st_size == 0:
         raise DocumentValidationError(f"Document is missing, empty, or not DOCX: {path}")
@@ -161,7 +161,14 @@ def validate_docx(path: Path | str, company: str, role: str = "") -> dict[str, A
         )
     except Exception as exc:
         raise DocumentValidationError(f"Cannot open DOCX {path}: {exc}") from exc
-    if company.casefold() not in text.casefold():
+    if document_kind == "cv":
+        # CVs describe the candidate; employer binding comes from the checked
+        # package manifest and canonical local filename, not summary keywords.
+        if "samuel anyan" not in text.casefold() or not all(
+            term in text.casefold() for term in ("education", "skills")
+        ):
+            raise DocumentValidationError(f"CV is missing candidate identity or required sections: {path.name}")
+    elif company.casefold() not in text.casefold():
         raise DocumentValidationError(f"Document does not mention company {company!r}: {path.name}")
     if role and role.casefold() not in text.casefold():
         raise DocumentValidationError(f"Document does not mention role {role!r}: {path.name}")
