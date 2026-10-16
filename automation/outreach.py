@@ -51,25 +51,6 @@ def validate_final_outreach(payload: dict[str, Any], contacts: list[dict[str, An
     return result
 
 
-def _read_template(path: Path) -> str:
-    if not path.is_file():
-        raise BatchSafetyError(f"Outreach template is missing: {path}")
-    content = path.read_text(encoding="utf-8").strip()
-    if not content or "add your approved outreach template" in content.casefold():
-        raise BatchSafetyError("Fill in prompts/outreach_template.md before creating email drafts")
-    return content
-
-
-def _render(template: str, values: dict[str, str]) -> str:
-    def replace(match: re.Match[str]) -> str:
-        return values.get(match.group(1), match.group(0))
-    rendered = re.sub(r"\{([a-z_]+)\}", replace, template)
-    unresolved = re.findall(r"\{([a-z_]+)\}", rendered)
-    if unresolved:
-        raise BatchSafetyError(f"Outreach template has unsupported placeholders: {', '.join(sorted(set(unresolved)))}")
-    return rendered
-
-
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as source:
@@ -103,7 +84,6 @@ def _assets_for_company(config: dict[str, Any], company_id: str, company: str) -
 def create_email_batch(config: dict[str, Any], state: StateStore,
                        *, company_ids: set[str] | None = None) -> dict[str, Any]:
     approved = eligible_companies(config["paths"]["workbook"], config["paths"]["registry"])
-    template = None
     messages = []
     skipped: list[str] = []
     contacts = state.list_contacts()
@@ -135,8 +115,8 @@ def create_email_batch(config: dict[str, Any], state: StateStore,
             folder = Path(config["paths"]["generated_dir"]) / f"{company_id}_{safe_component(company)}"
             final_path = folder / "outreach.json"
             final_copy = validate_final_outreach(json.loads(final_path.read_text(encoding="utf-8")), company_contacts) if final_path.is_file() else None
-            if final_copy is None and template is None:
-                template = _read_template(Path(config["paths"]["prompts_dir"]) / "outreach_template.md")
+            if final_copy is None:
+                raise BatchSafetyError("Final outreach.json is required; generate it using cv_tailoring_prompt.md modules O1–O3")
         except (BatchSafetyError, DocumentValidationError) as exc:
             skipped.append(f"{company_id}: {exc}")
             continue
@@ -145,21 +125,11 @@ def create_email_batch(config: dict[str, Any], state: StateStore,
             for path in attachments
         ]
         for contact in eligible_contacts[:5]:
-            values = {
-                "company": company,
-                "name": contact["full_name"],
-                "role": contact["role"],
-                "introduction": introduction,
-            }
-            if final_copy is not None:
-                copy = final_copy.get(contact["email"].strip().casefold())
-                if copy is None:
-                    skipped.append(f"{company_id}: no final outreach for contact {contact['contact_id']}")
-                    continue
-                body, subject = copy["body"], copy["subject"]
-            else:
-                body = _render(template, values)
-                subject = config["mail"]["subject_template"].format(**values)
+            copy = final_copy.get(contact["email"].strip().casefold())
+            if copy is None:
+                skipped.append(f"{company_id}: no final outreach for contact {contact['contact_id']}")
+                continue
+            body, subject = copy["body"], copy["subject"]
             identity = stable_hash([
                 company_id,
                 contact["contact_id"],

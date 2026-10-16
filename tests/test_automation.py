@@ -146,9 +146,10 @@ def prepare_outreach(tmp_path: Path, contact_count=1):
     make_doc(output / "Samuel Anyan_Example Energy_Speculative Approach_CV.docx", "Example Energy analyst CV")
     make_doc(output / "Samuel Anyan_Example Energy_Speculative Approach_Cover Letter.docx", "Example Energy introduction")
     (output / "introduction.md").write_text("I would be glad to discuss a practical scenario model.", encoding="utf-8")
-    (config["paths"]["prompts_dir"] / "outreach_template.md").write_text(
-        "Dear {name},\n\n{introduction}\n\nRegards, Samuel", encoding="utf-8"
-    )
+    (output / "outreach.json").write_text(json.dumps({"messages": [
+        {"recipient": f"person{index}@example.test", "subject": "Introduction: Example Energy",
+         "body": f"Dear Person {index},\n\nI would be glad to discuss a practical scenario model.\n\nRegards, Samuel"}
+        for index in range(contact_count)]}))
     state = StateStore(config["paths"]["database"])
     state.initialize()
     for index in range(contact_count):
@@ -256,18 +257,15 @@ def test_research_package_is_deterministic_and_prompts_remain_user_owned(tmp_pat
     config = make_config(tmp_path, workbook)
     write_research(config)
     cv_prompt = config["paths"]["prompts_dir"] / "cv_tailoring_prompt.md"
-    proposal_prompt = config["paths"]["prompts_dir"] / "proposal_prompt.md"
     cv_prompt.write_text("<!-- Add your own prompt here. -->", encoding="utf-8")
-    proposal_prompt.write_text("", encoding="utf-8")
 
     pending = build_input_package(2, config)
     assert pending["status"] == "awaiting_user_inputs"
     assert pending["opportunity_type"] == "speculative_approach"
-    assert set(pending["missing_prompts"]) == {"cv_tailoring", "proposal"}
+    assert set(pending["missing_prompts"]) == {"cv_tailoring"}
     assert "master_cv" in pending["missing_inputs"]
 
     cv_prompt.write_text("Tailor for {company} and {role}: {research_summary}; {job_description}", encoding="utf-8")
-    proposal_prompt.write_text("Propose to {company}: {research_summary}", encoding="utf-8")
     master_cv = tmp_path / "master-cv.docx"
     make_doc(master_cv, "Samuel Anyan master CV")
     config["paths"]["master_cv"] = master_cv
@@ -304,9 +302,7 @@ def test_supervised_handoff_opens_ui_and_auto_files_new_validated_downloads(tmp_
     config["paths"]["master_cv"] = tmp_path / "master-cv.docx"
     make_doc(config["paths"]["master_cv"], "Samuel Anyan master CV")
     cv_prompt = config["paths"]["prompts_dir"] / "cv_tailoring_prompt.md"
-    proposal_prompt = config["paths"]["prompts_dir"] / "proposal_prompt.md"
     cv_prompt.write_text("Tailor for {company}; research {research_summary}", encoding="utf-8")
-    proposal_prompt.write_text("Proposal for {company}: {research_summary}", encoding="utf-8")
     downloads = tmp_path / "Downloads"
     downloads.mkdir()
     old_doc = downloads / "old.docx"
@@ -507,9 +503,10 @@ def test_cancel_unsent_batch_deletes_mock_draft_and_allows_new_snapshot(tmp_path
     cancel_email_batch(state, batch["batch_id"], provider)
     assert provider.drafts == {}
     assert state.get_batch(batch["batch_id"])["status"] == "cancelled"
-    (config["paths"]["generated_dir"] / "2_Example Energy" / "introduction.md").write_text(
-        "Revised introduction requiring fresh approval.", encoding="utf-8"
-    )
+    copy_path = config["paths"]["generated_dir"] / "2_Example Energy" / "outreach.json"
+    copy = json.loads(copy_path.read_text())
+    copy["messages"][0]["body"] = "Revised introduction requiring fresh approval."
+    copy_path.write_text(json.dumps(copy))
     replacement = create_email_batch(config, state)
 
     assert replacement["batch_id"] != batch["batch_id"]

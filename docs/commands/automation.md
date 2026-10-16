@@ -51,7 +51,7 @@ Excel is the approval interface. A company enters the queue only when the same `
 .venv/bin/python main.py run --approved-only --only 2
 ```
 
-JAPP creates `data/generated/<ID>_<Company>/input_package.json`. Fill in your own content in `prompts/cv_tailoring_prompt.md` and `prompts/proposal_prompt.md`; JAPP does not generate or fabricate prompt content. ChatGPT Plus remains an attended workflow: JAPP does not script consumer ChatGPT submission or extract responses. Save the returned DOCX files and `introduction.md` into the generated company folder. DOCX validation checks file readability, company name, and optional role before advancing.
+JAPP creates `data/generated/<ID>_<Company>/input_package.json`. Fill in your own content in the sole modular prompt `prompts/cv_tailoring_prompt.md`; JAPP does not generate or fabricate prompt content. ChatGPT Plus remains an attended workflow: JAPP does not script consumer ChatGPT submission or extract responses. Save the returned DOCX files and final recipient-specific `outreach.json` into the generated company folder. DOCX validation checks file readability, company name, and optional role before advancing.
 
 ## Contacts
 

@@ -64,7 +64,7 @@ def _doctor(config: dict[str, Any]) -> int:
         if missing:
             issues.append(f"Workbook is missing sheets: {', '.join(sorted(missing))}")
     prompt_dir = Path(config["paths"]["prompts_dir"])
-    for prompt in ("cv_tailoring_prompt.md", "proposal_prompt.md", "outreach_template.md"):
+    for prompt in ("cv_tailoring_prompt.md",):
         if not (prompt_dir / prompt).is_file():
             issues.append(f"Prompt file is missing: {prompt_dir / prompt}")
     if config["mail"]["provider"] == "mock":

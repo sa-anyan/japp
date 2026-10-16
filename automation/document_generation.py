@@ -88,7 +88,6 @@ def build_input_package(company_id: int | str, config: dict[str, Any], *, role: 
     )
     prompts_dir = Path(paths["prompts_dir"])
     cv_template = _prompt(prompts_dir / "cv_tailoring_prompt.md")
-    proposal_template = _prompt(prompts_dir / "proposal_prompt.md")
     values = {
         "company": company,
         "role": role,
@@ -97,7 +96,7 @@ def build_input_package(company_id: int | str, config: dict[str, Any], *, role: 
     }
     missing_prompts = []
     rendered_prompts = {}
-    for key, template in (("cv_tailoring", cv_template), ("proposal", proposal_template)):
+    for key, template in (("cv_tailoring", cv_template),):
         if template is None:
             missing_prompts.append(key)
         else:

@@ -82,8 +82,6 @@ companies/<ID>_<Company>/
     master_cv.docx
     research.json
     cv_tailoring_prompt.md
-    proposal_prompt.md
-    outreach_template.md
     TASK.md
 ```
 
@@ -95,7 +93,7 @@ a job description or claiming an ATS/JD match score. Advertised roles use the ve
 Tell ChatGPT: “Use every approved company inputs folder and TASK.md to tailor the CV
 and prepare the proposal DOCX. Contacts will follow; finalise outreach when they arrive.”
 
-The three prompts in `prompts/` adapt the user's combined tailoring/writing specification:
+The sole writing prompt is `prompts/cv_tailoring_prompt.md`, copied verbatim from the user's modular specification. Its optional modules cover email, proposal and cover-letter writing:
 CV evidence and coverage audits go into `outputs/cv_audit.md`, separate from the one-page
 CV. Speculative work uses a relevance matrix without invented JD/ATS scores. Proposal
 or cover-letter text is capped at 250 words; outreach uses the evidence-led entry-level

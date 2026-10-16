@@ -41,10 +41,7 @@ def setup_exchange(tmp_path):
     config = make_config(tmp_path, workbook)
     config["paths"]["master_cv"] = tmp_path / "master.docx"
     make_doc(config["paths"]["master_cv"], "Samuel Anyan master CV facts")
-    for name, text in (("cv_tailoring_prompt.md", "Tailor for {company}: {research_summary}"),
-                       ("proposal_prompt.md", "Propose for {company}: {research_summary}"),
-                       ("outreach_template.md", "Write an email using {recipient_name} and {cv_evidence}")):
-        (config["paths"]["prompts_dir"] / name).write_text(text)
+    (config["paths"]["prompts_dir"] / "cv_tailoring_prompt.md").write_text("Tailor for {company}: {research_summary}")
     repo = FakeRepository(tmp_path / "private")
     research = write_research(config)
     raw = json.loads(research.read_text())
@@ -117,11 +114,28 @@ def test_package_scope_leaves_unselected_company_untouched(setup_exchange):
     assert package_inputs(config, repo, state, company_ids={"2"})["packaged"] == 1
 
 
-def test_proposal_placeholder_is_detected(setup_exchange):
+def test_package_removes_legacy_prompts_and_uses_only_modular_spec(setup_exchange):
     config, repo, state = setup_exchange
-    (config["paths"]["prompts_dir"] / "proposal_prompt.md").write_text(
+    folder = company_folder(repo.path, "2", "Example Energy") / "inputs"
+    folder.mkdir(parents=True)
+    for name in ("proposal_prompt.md", "outreach_template.md"):
+        (folder / name).write_text("Obsolete writing instructions")
+    # FakeRepository expects published files to exist; verify deletion staging separately.
+    published = []
+    repo.publish = lambda files, message: published.extend(files)
+    assert package_inputs(config, repo, state)["packaged"] == 1
+    assert {p.name for p in folder.glob("*prompt*.md")} == {"cv_tailoring_prompt.md"}
+    assert not (folder / "outreach_template.md").exists()
+    assert (folder / "proposal_prompt.md") in published
+    package = json.loads((folder / "input_package.json").read_text())
+    assert set(package["prompts"]) == {"cv_tailoring"}
+
+
+def test_modular_prompt_placeholder_is_detected(setup_exchange):
+    config, repo, state = setup_exchange
+    (config["paths"]["prompts_dir"] / "cv_tailoring_prompt.md").write_text(
         "# Proposal prompt\n<!-- Add your own proposal/introduction prompt here. -->")
-    assert "proposal" in build_input_package("2", config)["missing_prompts"]
+    assert "cv_tailoring" in build_input_package("2", config)["missing_prompts"]
     assert package_inputs(config, repo, state)["packaged"] == 0
     assert not repo.published
 

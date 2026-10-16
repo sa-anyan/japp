@@ -87,6 +87,9 @@ cv_tailoring_prompt.md is the exact user-supplied modular specification. Do not 
 rewrite or simplify it. It takes precedence over differing prose in the other prompts.
 The workflow explicitly requests optional email/proposal/cover-letter modules O1-O5 as
 applicable. Preserve M10 output order in the separate audit, then provide the final DOCX.
+Audit every module and layout requirement with its result and evidence. A module may be
+not applicable only with an explicit reason. Any unmet requirement must be disclosed;
+do not claim compliance or set ready=true while unresolved requirements remain.
 
 For an advertised vacancy, apply the weighted JD algorithm in the CV prompt.
 For a speculative approach (no verified JD), use this separate speculative workflow:
@@ -96,11 +99,11 @@ For missing JD-dependent inputs, record the module as not applicable with the re
 do not invent a JD or silently omit a step. This routing is limited to absent JD inputs:
 retain all applicable modules and the exact accuracy, writing, layout and validation rules.
 
-Generate a CV DOCX, a concise cover-letter/proposal DOCX using proposal_prompt.md, and
-recipient-specific final emails using outreach_template.md and contacts.json. Never send them.
+Generate a CV DOCX and use the sole cv_tailoring_prompt.md optional modules O1–O5
+for the requested proposal/cover-letter DOCX and email, using contacts.json. Never send them.
 If contacts have not arrived, prepare the documents and wait to finalise outreach/manifest.
 The workflow explicitly requests both the proposal/cover letter and email. Follow the
-proposal prompt's 250-word maximum, including salutation and addresses. Save the CV
+modular prompt's 250-word maximum, including salutation and addresses. Save the CV
 audit separately as outputs/cv_audit.md; do not insert audit tables into the final CV.
 Follow the private repository README's output contract exactly. Copy input_hash from
 input_package.json to the output manifest so stale results cannot enter the mailing workflow.
@@ -203,7 +206,7 @@ def package_inputs(config: dict[str, Any], repo: PrivateRepository, state: State
         inputs = inside(repo.path, f"{folder.relative_to(repo.path).as_posix()}/inputs")
         assets = {"master_cv.docx": Path(package["master_cv_path"]).read_bytes(),
                   "research.json": research_path.read_bytes(), "TASK.md": TASK.encode()}
-        for name in ("cv_tailoring_prompt.md", "proposal_prompt.md", "outreach_template.md"):
+        for name in ("cv_tailoring_prompt.md",):
             assets[name] = (Path(config["paths"]["prompts_dir"]) / name).read_bytes()
         # The public source repository and absolute private local paths are not uploaded.
         remote_package = {k: v for k, v in package.items() if k not in {"package_path", "output_dir", "master_cv_path"}}
@@ -218,6 +221,11 @@ def package_inputs(config: dict[str, Any], repo: PrivateRepository, state: State
             if old_hash != digest:
                 raise ValueError(f"Company {row.company_id} has downstream work; cancel/archive it before changing inputs")
         inputs.mkdir(parents=True, exist_ok=True)
+        for obsolete in ("proposal_prompt.md", "outreach_template.md"):
+            stale = inside(inputs, obsolete)
+            if stale.exists():
+                stale.unlink()
+                files.append(stale)
         for name, data in assets.items():
             target = inside(inputs, name)
             target.write_bytes(data)

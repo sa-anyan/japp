@@ -267,7 +267,7 @@ class SupervisedChatGPTHandoff:
                 downloads_dir=str(downloads_dir),
                 download_baseline=baseline,
                 prompt_text=package["prompts"]["cv_tailoring"],
-                proposal_text=package["prompts"]["proposal"],
+                proposal_text="Use optional modules O1–O5 of the supplied modular prompt for the requested proposal/cover letter and email.",
                 role=package["role"],
             )
             output_path = Path(package["output_dir"]) / "chatgpt_handoff.md"
