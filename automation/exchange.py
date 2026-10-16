@@ -146,8 +146,11 @@ def company_folder(root: Path, company_id: str, company: str) -> Path:
     return inside(root, f"companies/{company_id}_{safe_component(company)}")
 
 
-def export_research(config: dict[str, Any], repo: PrivateRepository) -> dict[str, Any]:
+def export_research(config: dict[str, Any], repo: PrivateRepository, *,
+                    company_ids: set[str] | None = None) -> dict[str, Any]:
     rows = approved(config)
+    if company_ids is not None:
+        rows = [row for row in rows if row.company_id in company_ids]
     # Capture source context by ID rather than spreadsheet row position.
     book = load_workbook(config["paths"]["workbook"], read_only=True, data_only=True)
     try:

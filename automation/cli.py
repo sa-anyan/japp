@@ -117,7 +117,8 @@ def build_parser() -> argparse.ArgumentParser:
     connect.add_argument("site", choices=("outlook",))
     exchange_parser = commands.add_parser("exchange", help="Private japp_data research and document workflow")
     exchange_commands = exchange_parser.add_subparsers(dest="exchange_command", required=True)
-    exchange_commands.add_parser("research", help="Publish approved company research requests")
+    research_parser = exchange_commands.add_parser("research", help="Publish approved company research requests")
+    research_parser.add_argument("--company-id", action="append", help="Export only this approved ID; repeat for multiple companies")
     package_parser = exchange_commands.add_parser("package", help="Pull research and publish master CV, prompts and inputs")
     package_parser.add_argument("--company-id", action="append", help="Package only this approved ID; repeat for multiple companies")
     discovery = exchange_commands.add_parser("contacts", help="Find Apollo decision makers and reveal work emails")
@@ -208,7 +209,8 @@ def main(argv: list[str] | None = None) -> int:
             repo = PrivateRepository(config)
             repo.sync()
             if args.exchange_command == "research":
-                result = export_research(config, repo)
+                result = export_research(config, repo,
+                                         company_ids=set(args.company_id) if args.company_id else None)
             else:
                 state = StateStore(paths["database"])
                 state.initialize()

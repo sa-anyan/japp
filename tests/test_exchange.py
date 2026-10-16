@@ -86,6 +86,15 @@ def test_research_export_is_stable_and_updates_only_pipeline_status(setup_exchan
     assert request["companies"][0]["company_id"] == "2"
 
 
+def test_research_scope_excludes_previously_selected_companies(setup_exchange):
+    config, repo, _ = setup_exchange
+    assert export_research(config, repo, company_ids={"16", "19"}) == {"companies": 0, "published": False}
+    assert repo.published == []
+    result = export_research(config, repo, company_ids={"2"})
+    request = json.loads((repo.path / f"requests/{result['batch_id']}/companies.json").read_text())
+    assert [r['company_id'] for r in request['companies']] == ['2']
+
+
 def test_input_package_is_portable_and_tracks_original_version(setup_exchange):
     config, repo, state = setup_exchange
     result = package_inputs(config, repo, state)
