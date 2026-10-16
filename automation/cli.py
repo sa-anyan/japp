@@ -113,6 +113,8 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser("stop", help="Request graceful shutdown after the current step")
     commands.add_parser("status", help="Show engine and workflow status")
     commands.add_parser("doctor", help="Validate local configuration and workbook")
+    connect = commands.add_parser("connect", help="Sign in and verify mailbox access without creating or sending email")
+    connect.add_argument("site", choices=("outlook",))
     exchange_parser = commands.add_parser("exchange", help="Private japp_data research and document workflow")
     exchange_commands = exchange_parser.add_subparsers(dest="exchange_command", required=True)
     exchange_commands.add_parser("research", help="Publish approved company research requests")
@@ -177,6 +179,15 @@ def main(argv: list[str] | None = None) -> int:
     try:
         config = load_config(args.config)
         paths = config["paths"]
+
+        if args.command == "connect":
+            if config["mail"]["provider"] != "outlook":
+                raise ValueError("Set mail.provider=outlook in local configuration first")
+            result = create_mail_provider(config).check_connection()
+            if not result["email"] or not result["drafts_access"]:
+                raise ValueError("Outlook sign-in did not verify both account identity and Drafts access")
+            print(json.dumps({**result, "send_enabled": config["mail"]["send_enabled"]}, indent=2))
+            return 0
 
         if args.command == "dashboard-copy":
             from .dashboard import dashboard_copy

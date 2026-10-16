@@ -79,7 +79,25 @@ A batch snapshot contains recipients, content, and attachment hashes. Any change
 
 Cancel an unsent batch before changing an approved draft. JAPP deletes the corresponding unsent provider drafts, marks the batch cancelled, and permits a new snapshot. Batches with a sent, in-flight, or uncertain message cannot be cancelled.
 
-Outlook uses Microsoft Graph delegated device-code auth; Gmail uses its REST provider and configured OAuth client environment variables. OAuth access tokens are held in memory, not written to the repo, and a long-running process may request sign-in again after restart. Provider/API calls and real sending were not exercised during development. Configure a supported OAuth application and consent to the required scopes before selecting a live provider. Consumer ChatGPT and Apollo UI automation are intentionally not supported.
+Outlook uses Microsoft Graph delegated auth. The default is device-code auth; set
+`mail.outlook.auth_flow` to `browser` for authorization-code browser sign-in with PKCE
+and a temporary localhost callback. For this desktop browser flow, register `http://localhost`
+under Mobile and desktop applications in Microsoft Entra. It does not require enabling the
+fallback “Allow public client flows” setting used for device-code auth. For personal-only
+applications use tenant `consumers`. The non-secret application ID can be stored in ignored
+local config as `mail.outlook.client_id`; `JAPP_MICROSOFT_CLIENT_ID` takes precedence.
+
+Run `.venv/bin/python main.py connect outlook` to sign in and verify profile identity and
+Drafts-folder access. This reads metadata only, creates no drafts and sends no messages.
+`login outlook` simply opens Outlook web and does not authorise the Python application.
+Mail access and sending permissions require your Microsoft consent. Keep `mail.send_enabled`
+false while connecting. OAuth tokens stay in memory; subsequent terminal processes sign in
+again using the browser session. No password, client secret or token cache is saved.
+
+Gmail uses its REST provider and configured OAuth client environment variables. Provider/API
+calls and real sending were not exercised by the mock test suite. Configure a supported OAuth
+application and consent to the required scopes before selecting a live provider. Consumer
+ChatGPT and Apollo UI automation are intentionally not supported.
 
 ## Local data and troubleshooting
 

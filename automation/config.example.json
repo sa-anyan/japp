@@ -55,6 +55,8 @@
     "max_send_pause_seconds": 60,
     "subject_template": "Introduction: {company}",
     "outlook": {
+      "auth_flow": "device_code",
+      "client_id": "",
       "tenant": "common",
       "client_id_env": "JAPP_MICROSOFT_CLIENT_ID",
       "scopes": ["Mail.ReadWrite", "Mail.Send", "User.Read", "offline_access"]
