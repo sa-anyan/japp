@@ -1,5 +1,10 @@
 # Outreach email — JAPP
 
+The exact supplied cv_tailoring_prompt.md is the authority for writing. Run its optional
+modules O1, O2 and O3: the JAPP workflow explicitly requests an email. Where the guidance
+below differs in wording, salutation, sign-off or structure, follow that exact modular
+specification. The JSON transport and verified-recipient requirements below still apply.
+
 Use the master CV, tailored CV, company research and contacts.json to write a concise,
 recipient-centred email in natural UK English. This workflow explicitly requests the
 email; do not wait for another request. Candidate facts and metrics come only from the

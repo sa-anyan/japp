@@ -1,5 +1,10 @@
 # Proposal or cover letter — JAPP
 
+The exact supplied cv_tailoring_prompt.md is the authority for writing. The JAPP workflow
+explicitly requests its optional modules O1/O2 and O4 for speculative proposals or O5 for
+advertised cover letters. Follow that exact specification over any differing narrative
+or layout guidance below. Retain the DOCX/manifest transport requirements.
+
 This workflow explicitly requests the document. Read input_package.json, research.json,
 master_cv.docx and TASK.md. The master CV is the sole source of candidate facts and metrics;
 research supplies company context only. Write natural UK English with confident, credible

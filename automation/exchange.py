@@ -83,13 +83,18 @@ TASK = """# Prepare final application documents
 
 Use master_cv.docx as the sole source of candidate facts. Follow the supplied CV layout
 and evidence rules. The input package's company research supplies context, never credentials.
+cv_tailoring_prompt.md is the exact user-supplied modular specification. Do not summarise,
+rewrite or simplify it. It takes precedence over differing prose in the other prompts.
+The workflow explicitly requests optional email/proposal/cover-letter modules O1-O5 as
+applicable. Preserve M10 output order in the separate audit, then provide the final DOCX.
 
 For an advertised vacancy, apply the weighted JD algorithm in the CV prompt.
 For a speculative approach (no verified JD), use this separate speculative workflow:
 select evidenced CV experience relevant to the researched business and proposed contribution;
 do not invent a JD, calculate an ATS/JD score, or describe proposed work as completed work.
-This speculative branch replaces JD-dependent steps, including the instruction to stop and ask
-for a speculative workflow. Retain the CV prompt's accuracy, formatting and validation rules.
+For missing JD-dependent inputs, record the module as not applicable with the reason;
+do not invent a JD or silently omit a step. This routing is limited to absent JD inputs:
+retain all applicable modules and the exact accuracy, writing, layout and validation rules.
 
 Generate a CV DOCX, a concise cover-letter/proposal DOCX using proposal_prompt.md, and
 recipient-specific final emails using outreach_template.md and contacts.json. Never send them.
