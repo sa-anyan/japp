@@ -91,7 +91,26 @@ a job description or claiming an ATS/JD match score. Advertised roles use the ve
 Tell ChatGPT: “Use every approved company inputs folder and TASK.md to tailor the CV
 and prepare the proposal DOCX. Contacts will follow; finalise outreach when they arrive.”
 
+The three prompts in `prompts/` adapt the user's combined tailoring/writing specification:
+CV evidence and coverage audits go into `outputs/cv_audit.md`, separate from the one-page
+CV. Speculative work uses a relevance matrix without invented JD/ATS scores. Proposal
+or cover-letter text is capped at 250 words; outreach uses the evidence-led entry-level
+pitch. The existing `cover_letter` manifest field represents either letter type.
+Prompt changes apply when new input packages are published. They do not revise existing
+drafts automatically; downstream packages are hash-protected and must be archived/cancelled
+before a new prompt version can replace their inputs.
+
 ## 3. Retrieve contacts while ChatGPT prepares documents
+
+The research handoff also asks ChatGPT to write
+`research/contact_candidates/<ID>.json` with one evidenced hiring contact, their current
+role, public LinkedIn profile URL, official company domain and supporting sources.
+These leads are not email recipients. Match them in Apollo's normal browser interface
+using the profile URL where supported, otherwise name plus company/domain; confirm the
+current employer before revealing a work email. Import the resulting Apollo CSV through
+the existing contact importer. Only verified, unsuppressed contacts qualify for outreach.
+This browser step is supervised; the terminal command below still requires API access
+and does not yet consume ChatGPT's candidate files automatically.
 
 Configure an Apollo API key in the terminal environment (`APOLLO_API_KEY`). The connected
 Apollo app in a chat does not automatically provide API credentials to a terminal process.

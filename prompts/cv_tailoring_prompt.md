@@ -1,27 +1,38 @@
-# CV Tailoring Prompt — Samuel Anyan
+# CV tailoring — JAPP
 
-Use only three sources: (1) the attached master CV, (2) the job description pasted below, (3) the formatting spec in this prompt. Ignore any saved memory, custom instructions or previous chats. Do not add any fact, location preference, skill, number or credential that is not written in the master CV. If a JD requirement has no evidence in the master CV, list it as “Missing” and do not write it into the CV. Before the final CV, output the word-bank table (term, count, weight) and the master-vs-tailored coverage table, and list every line you changed with the master CV line it came from.
+Use the attached master CV as the sole source of candidate facts. The supplied verified job description, company research and this formatting specification guide relevance and presentation. Examples below illustrate style only: never copy their names, dates, grades, locations, skills, memberships, numbers or achievements unless the master CV independently supports them. Preserve the master's real job titles. Do not claim an 80–100% match when the evidence does not support it.
+
+## Workflow and audit output
+
+Read input_package.json for company, role, opportunity_type and input_hash, plus research.json and TASK.md. Do not ask for inputs already provided. For an advertised vacancy, execute every JD extraction, weighting, matching, coverage-preservation and writing step below. Put the term/count/weight bank, master-versus-tailored exact and evidence-based coverage tables, Missing requirements, lost-competency trade-offs, and every changed line mapped to its master-CV evidence into outputs/cv_audit.md. These tables must not consume space in the final CV. Use stable paragraph/bullet references or exact source excerpts. This is an evidence audit, not a request for hidden reasoning.
+
+For a speculative approach with no verified JD, do not invent a JD or calculate JD/ATS scores. Use the company's business model, evidenced differentiation and plausible contribution from research.json to rank master-CV experience and projects. Record a company-relevance/evidence matrix and line-change audit instead; mark JD coverage not applicable. Apply all writing, evidence, one-page layout and final-validation rules in either branch. Unknown company workflows remain unknown; proposed improvements are hypotheses.
+
+Research may inform company context only; candidate claims must come from the master CV. Omit unsupported requirements and report them in the audit. Do not add geographic preferences, contact details or credentials from examples or prior chats. Read personal contact fields and hyperlink destinations from the master CV.
+
+The units of all margins below are centimetres. Render and inspect the final DOCX, confirm exactly one page and working hyperlinks. If rendering is unavailable or a requirement cannot be satisfied, record the limitation and do not mark the manifest ready. Audit files stay separate and are not email attachments.
+
+
+Architecture
+JD → Competency extraction and weighting → Exact matching → Equivalent matching → JD-aligned rewriting → Evidence ranking → CV tailoring → Formatting and final validation.
 
 
 
-Execute this prompt step by step with deep analysis. Do not skip any process or over simplify it. It is an algorithm for a reason
-
-
-Page Setup: Goal one page CV (extremely important and main priority is following the clean page layout). Content is tailored to fit
+Page Setup: Goal: one-page A4 CV. Preserve evidence and readability; select and shorten content to fit. Never reduce the specified font sizes or margins to force a fit.
 From edge: Header 1.25cm, Footer 1.25cm.
 Vertical Alignment: Top
 
 Margins
-Top:0.63
-Bottom:0.57
+Top:0.63cm
+Bottom:0.57cm
 Left:1.4cm
 Right:1.55cm
 Gutter: 0
 Gutter position: Left
 
-Name First letter capitalised, Arial 18-20pt. (Align centre)
-Right after 3-4pt layout spacing
-Then Contact details like the example in 8 - 9pt arial : London, UK | [phone from master CV] | [email from master CV]  | LinkedIn | Portfolio & Models: [portfolio link from master CV]  (Align Center)
+Name: normal title case, Arial 18-20pt. (Align centre)
+Right after, 3- 4 pt layout spacing
+Then contact details like the example in 8-9pt Arial: [location from master CV] | [phone from master CV] | [email from master CV]  | LinkedIn | Portfolio & Models: [portfolio URL from master CV]  (Align Center) ( Always make. sure the links are clickable)
 
 Body text in 9.5 Arial
 
@@ -45,7 +56,7 @@ Next header
 Projects section works like this
 Projects
 2pt space
-Modified title (Tools or skills used) | where | year · All bolded 
+Modified title (Tools or skills used) | where | year · All bolded
 eg.Techno-Economic Modelling (Excel & Python) | UON | 2024
 Then 0pt space
 The description
@@ -59,24 +70,22 @@ MSc. Chemical Engineering, Merit
 Kwame Nkrumah University of Science and Technology | Ghana | Aug 2018–Sep 2022
 BSc. Petroleum Engineering, 2:1
 
-SKILLS
+SKILLS (major heading)
 2pt space
 ·       Computing: Advanced Excel, Python (Pandas & NumPy), and MATLAB for quantitative analysis and data modelling
 ·       Statistical & Quantitative: regression analysis, Monte Carlo and scenario modelling, numerical methods, probabilistic forecasting
 ·       AI-Assisted Analysis: uses AI tools to support supply/demand forecasting and decision-making in engineering systems
 ·       Commercial: Develop financial models to evaluate investment feasibility and forecast costs
 
-Same for Achievements and Additional Information
+Same for Achievements (major heading)
+
+Additional Information(Major heading)
 
 
 
 
 
-Tailoring
-
-Architecture
-JD → Competency extraction and weighting → Exact matching → Equivalent matching → JD-aligned rewriting → Evidence ranking → CV tailoring → Formatting and final validation.
-
+CV Audit and Tailoring Process
 
 
 Act as an experienced UK recruiter with 20 years of experience and versed in the art of writing CVs and the psychology of advertising. Our goal is to tailor my CV and achieve an extremely high match (80 to 100%) one-page CV following these steps:
@@ -87,6 +96,7 @@ Act as an experienced UK recruiter with 20 years of experience and versed in the
 
 3. Analyse my master resume for other skills or phrases present in the JD that have been worded differently. Rewrite them into a phrase or word so they match the JD, and hold them in the temporary word/phrase bank.
 
+4. For speculative applications, follow the speculative branch below instead of JD extraction and scoring. Use supplied company research to identify relevance.
 
 Steps expanded
 Step 1
@@ -153,14 +163,14 @@ The same extraction and matching rules must be applied to every CV being compare
 
 Now that we have identified all the words and phrases required, we actually move to tailoring the CV.
 
-Professional Summary: 
+Professional Summary:
 This must not exceed 70 words or three clean sentences. A perfect example will be who I am - what I do or have done - what I am looking for that matches the JD or makes me the relevant candidate. Eg for a role in Finance we can write “Chemical and Petroleum Engineering professional with hands-on experience delivering Ghana’s first $350M LNG terminal through commercial analysis, quantitative modelling and project controls. Builds financial and technical models in Excel, Python and MATLAB, with award-winning design and business planning work. Now building towards roles analysing or trading energy and commodity markets”
 
 A placeholder version will look like: [xyz] professional with hands-on experience [something I have done that the recruiter may be looking for (e.g., project, job, course, development, etc.)] through [x, y, and z skills that appeared the most or most relevant that I have]. Builds [stuff that I build and do that relate to the job description, use numbers like a minimalist but confident if required] in [where I build them, tools, competencies, etc.] with award-winning design [Achievements that set me apart and showcase competency or more(making me memorable)]. Now building towards roles [maybe the industry, field, or projects the company works on without explicitly mentioning company name]
 
 Use the word bank to guide relevance, not dictate wording. Select only the two or three most defining competencies that naturally support the candidate's professional story. The summary is not responsible for achieving keyword coverage. Distribute the remaining JD competencies across Work Experience, Projects and Skills, where they can be demonstrated with evidence.
 
-Professional Summary must immediately tell the reader “this is who I am looking for” assuming they were using the JD as a marking scheme.  Do not fake titles to meet this goal; my last role was in operations analytics, and MSc BSc. I do xyz to tell them I am who they are looking for. etc
+Professional Summary must immediately tell the reader, “this is who I am looking for”, assuming they were using the JD as a marking scheme.  Do not fake titles to meet this goal; my last role was in operations analytics, and MSc BSc. I do xyz to tell them I am who they are looking for. etc
 
 
 Hard rules for professional Summary
@@ -207,10 +217,10 @@ Action verb + responsibility + methodology + quantified outcome
 Action verb + responsibility + collaboration/method + quantified outcome
 Action verb + stakeholder/team + analytical method + commercial outcome
 
-An example of each will be: 
-“·       Applied project control principles for schedule, cost, and risk tracking across work packages, giving stakeholders real-time visibility into delivery progress 
+An example of each will be:
+“·       Applied project control principles for schedule, cost, and risk tracking across work packages, giving stakeholders real-time visibility into delivery progress
 ·       Coordinated multidisciplinary work packages using agile methodologies to meet key performance indicators (KPIs) of 80% on-time delivery
-·       Managed safety tracker actions, collaborating with cross-functional teams to close out 80% of outstanding Hazard actions 
+·       Managed safety tracker actions, collaborating with cross-functional teams to close out 80% of outstanding Hazard actions
 ·       Liaised with the procurement team through cost analysis and data-driven support for vendor negotiations to reduce maintenance costs of engineering equipment by 3–5%.
 
 The style has five defining characteristics:
@@ -227,7 +237,7 @@ Review all bullets and rank them by alignment to the job description. Check if t
 Once this is done, arrange remaining bullets in order of strong match (strong match can be classed by having words from the temporary word bank with a high percentage or competency in recommended, essential or what we are looking for sections)
 
 Projects:
-Now projects are quite important because that is where we showcase most skills. We currently have limited work experience. Following the floating goal, pick relevant projects. We can choose a number of projects based on space (1-page requirement). 
+Now projects are quite important because that is where we showcase most skills. We currently have limited work experience. Following the floating goal, pick relevant projects. We can choose a number of projects based on space (1-page requirement).
 
 structure could be “Past-tense action verb + specific technical deliverable + quantified scale/context (where relevant) + methodology, tools or analytical techniques + measurable outcome or business purpose.”
 An example will be “Techno-Economic Modelling (Excel & Python) | UON | 2024
@@ -250,14 +260,14 @@ Use short, technically specific phrases rather than full achievement statements.
 Maintain approximately four category-led bullets, the original writing density, bold labels and professional UK English.
 Avoid keyword stuffing, generic proficiency claims ("excellent", "highly skilled", "proficient in"), personal pronouns, invented capabilities and unnecessary explanations.
 
-Egs. ·       Computing: Advanced Excel, Python (Pandas & NumPy), and MATLAB for quantitative analysis and data modelling
+Egs.: ·       Computing: Advanced Excel, Python (Pandas & NumPy), and MATLAB for quantitative analysis and data modelling
 ·       Statistical & Quantitative: regression analysis, Monte Carlo and scenario modelling, numerical methods, probabilistic forecasting
 ·       AI-Assisted Analysis: uses AI tools to support supply/demand forecasting and decision-making in engineering systems
 ·       Commercial: Develop financial models to evaluate investment feasibility and forecast costs
 
 Education:
 This is easy
-Just my University and under it my grade and course. This will be the same everytime. Eg.
+Just my University and, under it, my grade and course. This will be the same every time. Eg.
 University of Nottingham | United Kingdom | Sep 2023–Sep 2024
 MSc. Chemical Engineering, Merit
 
@@ -265,20 +275,20 @@ Kwame Nkrumah University of Science and Technology | Ghana | Aug 2018–Sep 2022
 BSc. Petroleum Engineering, 2:1
 
 Achievements:
-I usually write it like this: University of Nottingham | First Prizes, Design Project & Presentation Excellence · Top Food Engineering Student (88%) · Developing Solutions Scholarship · Ghana Scholarship Secretariat Award 
+I usually write it like this: University of Nottingham | First Prizes, Design Project & Presentation Excellence · Top Food Engineering Student (88%) · Developing Solutions Scholarship · Ghana Scholarship Secretariat Award
 
 Where I achieved it, followed by | and then each achievement separated by ·
 
 Additional Information:
-This is your section to shine. Whatever was included in the master CV, my website, etc that matches the floating company analysis and JD and also using the temporary floating words, write whatever may support my application and increase my score using your experience as a UK recruiter. 
+This is your section to shine. Only information evidenced in the master CV that matches the floating company analysis and JD and also using the temporary floating words, write whatever may support my application and increase my score using your experience as a UK recruiter.
 
-I usually have a category and explain, list or write something. Eg currently, I have 
+I usually have a category and explain, list or write something. Eg currently, I have
 ·       Programmes & Courses: McKinsey Forward Program – McKinsey · Oil and Gas Financial Markets – Duke University
 ·       Job Simulations: JPMorgan Chase Investment Banking Simulation · AmplifyME Asset Management and M&A
 ·       Hobby: Video generation and shooting, Music, automating boring tasks, building projects
 Societies: Toastmasters International Public speaking club, ICHemE, SPE
 
-Always keep my societies because I know people like that
+Always retain societies evidenced in the master CV; never infer membership from these examples.
 
 
 In tailoring the CV, use your skills and experience as an experienced recruiter with 20 years to place the sections in the order which supports the role the most. E.g., after the professional summary, if projects support or match the role the most, start with projects. If skills, start with skills; if education, start with education and so forth”
@@ -313,11 +323,4 @@ If a requirement cannot be satisfied, explain the trade-off rather than silently
 Report the calculated competency coverage separately from any external ATS score.
 Never claim an externally verified ATS match percentage without evidence.
 
-Save file as 
-Samuel Anyan_Company Name_Job title_CV (Include spaces)
-
----
-
-## Runtime inputs
-
-Use the supplied master CV as the sole source of candidate evidence. Substitute `{company}`, `{role}`, `{job_description}`, and `{research_summary}` when available. Company research may inform relevance and selection, but must not introduce new candidate claims. Load personal contact fields `[phone from master CV]`, `[email from master CV]`, and `[portfolio link from master CV]` from private local configuration, not this public repository. Where there is no verified job description, do not invent one; ask for a separate speculative-approach workflow.
+Save as Samuel Anyan_Company Name_Job title_CV.docx (spaces retained). JAPP will validate and apply its canonical filename.

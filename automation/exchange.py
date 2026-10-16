@@ -30,8 +30,25 @@ Required fields: company_id, company, business_model, entry_level_fit, current_w
 opportunity (all text except ID), proposed_product {name, description}, confidence
 (low/medium/high), sources (array of {url, supports, accessed_at}).
 Optional: website (official company URL), role and job_description (only a verified vacancy).
+Include evidenced competitor/differentiation research, speculative-application advice,
+and a relevant feasible contribution where available. Label missing evidence and hypotheses;
+never invent competitors or internal priorities to meet a requested count.
 Preserve the exact ID/name pair. Cite evidence, label unknowns, and never invent an internal
 workflow, tool gap, vacancy, contact, or financial saving. Commit research on main.
+
+Also write research/contact_candidates/<company_id>.json for each researched company:
+{"schema_version":"1.0", "company_id":"exact ID", "company":"Exact Company",
+ "company_domain":"official domain", "candidates":[{"full_name":"evidenced name",
+ "role":"current evidenced role", "linkedin_url":"public LinkedIn profile URL",
+ "sources":[{"url":"evidence URL", "supports":"current employer and role",
+ "accessed_at":"YYYY-MM-DD"}], "confidence":"high", "reason":"hiring relevance"}]}.
+Prioritise one suitable hiring decision maker per company; return an empty candidates
+array with an explanation when none can be verified. Verify the current employer using
+the official domain, location and public evidence; exclude similarly named businesses.
+Use public search and company team pages where LinkedIn is unavailable. Never invent
+profile URLs, roles or email addresses. These are research leads, not verified recipients.
+JAPP's supervised Apollo step will match the profile/name/company and retrieve a work
+email before writing contacts.json. Do not copy candidates directly into outreach.
 
 ## Document stage
 For each companies/<ID>_<Company>/inputs folder, read input_package.json,
@@ -54,6 +71,10 @@ Commit files first, then mark each company complete by committing outputs/manife
 Paths are relative to outputs, must stay within it and must not be symlinks.
 The ready flag means files are final; partial files without a ready manifest are ignored.
 Preserve all working hyperlinks and verify final CV layout and evidence before marking ready.
+Write outputs/cv_audit.md with the supplied CV prompt's evidence/coverage tables,
+line-change mapping, layout checks and proposal/cover-letter word count. Keep this
+audit separate from the one-page CV and email attachments. In speculative applications,
+use a relevance/evidence matrix and mark JD coverage not applicable.
 JAPP checks DOCX readability, company/role content and identity; it cannot certify visual quality.
 Commit the completed structure on main. Do not send emails from ChatGPT.
 """
@@ -73,6 +94,9 @@ for a speculative workflow. Retain the CV prompt's accuracy, formatting and vali
 Generate a CV DOCX, a concise cover-letter/proposal DOCX using proposal_prompt.md, and
 recipient-specific final emails using outreach_template.md and contacts.json. Never send them.
 If contacts have not arrived, prepare the documents and wait to finalise outreach/manifest.
+The workflow explicitly requests both the proposal/cover letter and email. Follow the
+proposal prompt's 250-word maximum, including salutation and addresses. Save the CV
+audit separately as outputs/cv_audit.md; do not insert audit tables into the final CV.
 Follow the private repository README's output contract exactly. Copy input_hash from
 input_package.json to the output manifest so stale results cannot enter the mailing workflow.
 """
@@ -137,7 +161,7 @@ def export_research(config: dict[str, Any], repo: PrivateRepository) -> dict[str
     for row in rows:
         update_pipeline_status(config["paths"]["workbook"], row.company_id, "Exported")
     return {"companies": len(companies), "batch_id": batch_id, "published": True,
-            "next": f"Ask ChatGPT to research requests/{batch_id}/companies.json and commit research/companies JSON."}
+            "next": f"Ask ChatGPT to research requests/{batch_id}/companies.json and commit company research plus research/contact_candidates JSON."}
 
 
 def package_inputs(config: dict[str, Any], repo: PrivateRepository, state: StateStore) -> dict[str, Any]:
