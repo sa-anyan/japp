@@ -405,24 +405,18 @@ R5 what is extremely important to them and would not read as flattery (e.g. an o
 
 ### O3 EMAIL
 Candidate is entry level. The reference letter (10-year bank manager) shows structure only; never copy its content.
-Apply G7–G11. Use the human introduction and evidence-supported structure below.
+Apply G7–G11. Restore the P1–P3 structure below as the required email sequence.
+Open with Samuel's relevant background: "My background in [relevant field/work]...",
+then connect it to the company. Adapt naturally to each recipient; never leave placeholders.
+This background-led opening takes precedence over any instruction to open with project results.
 
-1. After the greeting, ALWAYS open with a short, natural introduction before technical
-   evidence. In two or three connected sentences, say what specific, researched company
-   work caught Samuel's interest, briefly introduce his relevant background, and explain
-   why he is reaching out (for example, a suitable junior opportunity or a conversation
-   about contributing). Make the company connection explicit. Do not open abruptly with
-   "I developed...", an IRR figure or a list of project results. Avoid generic praise,
-   invented familiarity and unsupported claims about the company's needs.
-2. Then introduce the strongest relevant named project, tool, automation or achievement,
-   explaining what was built/changed and the evidenced improvement. Establish credibility
-   with the concrete method/result and any relevant award,
+1. Start with "My background in [relevant field/work]..." and explain why it is relevant
+   to this company. Then support it with the strongest relevant named project, tool,
+   automation or achievement, explaining what was built/changed and the evidenced
+   improvement. Do not default to LNG or list disconnected skills.
+2. Establish credibility with the concrete method/result and any relevant award,
    scholarship or recognition. Use one primary example and at most one useful supporting
    example. Never equate modelled ROI with realised savings or invent time saved.
-   Do not default to LNG or list disconnected skills. Integrate necessary qualifications
-   naturally (for example, "In my MSc project, the model indicated...") rather than adding
-   a defensive disclaimer after every claim. Keep the distinction between academic,
-   modelled and realised results accurate.
 3. Connect that evidence to a documented company activity and one specific contribution
    Samuel could build. Explain what could improve and propose validating the need with
    the team when internal workflows are unknown. Avoid generic offers to "add value".
@@ -437,19 +431,13 @@ the same LNG paragraph across a batch simply because a saving figure is availabl
 ```
 Dear [Name]
 
-P1 I came across [company]'s work on [verified specific activity] and wanted to introduce
-   myself. I'm [brief relevant background], and I'm interested in [honest reason for
-   contacting this company and the kind of contribution/opportunity sought].
-P2 During [relevant project or experience], I built/improved [specific work] using [method],
-   resulting in [supported outcome, with modelling/academic context where needed].
-   Add at most one useful supporting example or relevant recognition.
-P3 Connect that experience to one concrete contribution worth exploring with the team.
-   Include the verified project/portfolio link and mention attachments if included.
-P4 End with a warm, low-pressure invitation to talk or a request for the right colleague.
-
-Use this as a conversational sequence, not wording to repeat verbatim across companies.
-Read the email aloud: it should sound like Samuel introducing himself to a person,
-not a technical abstract, a sales template or an unsupported promise to fix their business.
+P1 My background in [relevant field/work] should be of interest to a [specific company descriptor] firm like yours.
+   -> states worth and what I know (not think) the company wants; sincere, specific to what every such firm needs.
+P2 In various capacities in [operations / automation / engineering / etc., named from what I have done or built: company, personal, school, volunteering] at [where],
+   leading to my present [professional development / where I am now],
+   I have acquired skills in all phases of [ONE category the company needs] including [skills + specific related achievements].
+   -> evidence without fluff; flawless sentence construction.
+P3 Call to action (own wording): I have attached a sample proposal on how I can immediately help [do X] at your company.
 
 Sincerely,
 [Name]
