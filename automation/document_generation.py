@@ -14,6 +14,7 @@ from docx import Document
 PLACEHOLDER_MARKERS = (
     "<!-- add your prompt here -->",
     "add your own prompt here",
+    "add your own proposal/introduction prompt here",
     "TODO: add your own prompt",
 )
 PROMPT_FIELDS = {"company", "role", "job_description", "research_summary"}
@@ -38,6 +39,9 @@ def expected_filename(company: str, role: str, kind: str) -> str:
         kind = "Cover Letter"
     if kind not in {"CV", "Cover Letter"}:
         raise ValueError("kind must be CV or Cover Letter")
+    if not role.strip() or re.sub(r"[_ -]+", " ", role.strip().casefold()) in {"speculative", "speculative approach"}:
+        suffix = "Proposal" if kind == "Cover Letter" else "CV"
+        return f"Samuel Anyan_{safe_component(company)}_{suffix}.docx"
     return f"Samuel Anyan_{safe_component(company)}_{safe_component(role)}_{kind}.docx"
 
 
@@ -56,7 +60,7 @@ def _prompt(path: Path) -> str | None:
     if not path.is_file():
         return None
     content = path.read_text(encoding="utf-8").strip()
-    if not content or any(marker in content.casefold() for marker in PLACEHOLDER_MARKERS):
+    if not content or any(marker.casefold() in content.casefold() for marker in PLACEHOLDER_MARKERS):
         return None
     return content
 
@@ -87,7 +91,6 @@ def build_input_package(company_id: int | str, config: dict[str, Any], *, role: 
     )
     prompts_dir = Path(paths["prompts_dir"])
     cv_template = _prompt(prompts_dir / "cv_tailoring_prompt.md")
-    proposal_template = _prompt(prompts_dir / "proposal_prompt.md")
     values = {
         "company": company,
         "role": role,
@@ -96,7 +99,7 @@ def build_input_package(company_id: int | str, config: dict[str, Any], *, role: 
     }
     missing_prompts = []
     rendered_prompts = {}
-    for key, template in (("cv_tailoring", cv_template), ("proposal", proposal_template)):
+    for key, template in (("cv_tailoring", cv_template),):
         if template is None:
             missing_prompts.append(key)
         else:
@@ -149,7 +152,7 @@ def build_input_package(company_id: int | str, config: dict[str, Any], *, role: 
     return package
 
 
-def validate_docx(path: Path | str, company: str, role: str = "") -> dict[str, Any]:
+def validate_docx(path: Path | str, company: str, role: str = "", *, document_kind: str = "letter") -> dict[str, Any]:
     path = Path(path)
     if path.suffix.casefold() != ".docx" or not path.is_file() or path.stat().st_size == 0:
         raise DocumentValidationError(f"Document is missing, empty, or not DOCX: {path}")
@@ -161,7 +164,14 @@ def validate_docx(path: Path | str, company: str, role: str = "") -> dict[str, A
         )
     except Exception as exc:
         raise DocumentValidationError(f"Cannot open DOCX {path}: {exc}") from exc
-    if company.casefold() not in text.casefold():
+    if document_kind == "cv":
+        # CVs describe the candidate; employer binding comes from the checked
+        # package manifest and canonical local filename, not summary keywords.
+        if "samuel anyan" not in text.casefold() or not all(
+            term in text.casefold() for term in ("education", "skills")
+        ):
+            raise DocumentValidationError(f"CV is missing candidate identity or required sections: {path.name}")
+    elif company.casefold() not in text.casefold():
         raise DocumentValidationError(f"Document does not mention company {company!r}: {path.name}")
     if role and role.casefold() not in text.casefold():
         raise DocumentValidationError(f"Document does not mention role {role!r}: {path.name}")

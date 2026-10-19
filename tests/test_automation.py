@@ -21,6 +21,7 @@ from automation.document_generation import (
 )
 from automation.engine import InstanceAlreadyRunning, SingleInstanceLock, request_stop, start_engine
 from automation.github_research import DirtyResearchTree, pull_research_records
+from automation.handoff import SupervisedChatGPTHandoff, classify_document, snapshot_downloads
 from automation.orchestrator import import_pending_contacts, run_approved_queue
 from automation.outreach import (
     BatchSafetyError,
@@ -142,12 +143,13 @@ def prepare_outreach(tmp_path: Path, contact_count=1):
     config = make_config(tmp_path, workbook_path)
     output = config["paths"]["generated_dir"] / "2_Example Energy"
     output.mkdir(parents=True)
-    make_doc(output / "Samuel Anyan_Example Energy_Speculative Approach_CV.docx", "Example Energy analyst CV")
+    make_doc(output / "Samuel Anyan_Example Energy_Speculative Approach_CV.docx", "Samuel Anyan analyst CV Education Skills")
     make_doc(output / "Samuel Anyan_Example Energy_Speculative Approach_Cover Letter.docx", "Example Energy introduction")
     (output / "introduction.md").write_text("I would be glad to discuss a practical scenario model.", encoding="utf-8")
-    (config["paths"]["prompts_dir"] / "outreach_template.md").write_text(
-        "Dear {name},\n\n{introduction}\n\nRegards, Samuel", encoding="utf-8"
-    )
+    (output / "outreach.json").write_text(json.dumps({"messages": [
+        {"recipient": f"person{index}@example.test", "subject": "Introduction: Example Energy",
+         "body": f"Dear Person {index},\n\nI would be glad to discuss a practical scenario model.\n\nRegards, Samuel"}
+        for index in range(contact_count)]}))
     state = StateStore(config["paths"]["database"])
     state.initialize()
     for index in range(contact_count):
@@ -255,18 +257,15 @@ def test_research_package_is_deterministic_and_prompts_remain_user_owned(tmp_pat
     config = make_config(tmp_path, workbook)
     write_research(config)
     cv_prompt = config["paths"]["prompts_dir"] / "cv_tailoring_prompt.md"
-    proposal_prompt = config["paths"]["prompts_dir"] / "proposal_prompt.md"
     cv_prompt.write_text("<!-- Add your own prompt here. -->", encoding="utf-8")
-    proposal_prompt.write_text("", encoding="utf-8")
 
     pending = build_input_package(2, config)
     assert pending["status"] == "awaiting_user_inputs"
     assert pending["opportunity_type"] == "speculative_approach"
-    assert set(pending["missing_prompts"]) == {"cv_tailoring", "proposal"}
+    assert set(pending["missing_prompts"]) == {"cv_tailoring"}
     assert "master_cv" in pending["missing_inputs"]
 
     cv_prompt.write_text("Tailor for {company} and {role}: {research_summary}; {job_description}", encoding="utf-8")
-    proposal_prompt.write_text("Propose to {company}: {research_summary}", encoding="utf-8")
     master_cv = tmp_path / "master-cv.docx"
     make_doc(master_cv, "Samuel Anyan master CV")
     config["paths"]["master_cv"] = master_cv
@@ -293,6 +292,74 @@ def test_docx_validation_checks_company_and_role(tmp_path):
         validate_docx(path, "Example Energy", "Director")
     generated = save_text_as_docx("Company-specific text exactly as returned.", tmp_path / "text.docx")
     assert validate_docx(generated, "Company-specific")["bytes"] > 0
+
+
+def test_supervised_handoff_opens_ui_and_auto_files_new_validated_downloads(tmp_path):
+    workbook_path = tmp_path / "dashboard.xlsx"
+    make_dashboard(workbook_path, approvals=((2, "Example Energy", "Approved", "Start"),))
+    config = make_config(tmp_path, workbook_path)
+    write_research(config)
+    config["paths"]["master_cv"] = tmp_path / "master-cv.docx"
+    make_doc(config["paths"]["master_cv"], "Samuel Anyan master CV")
+    cv_prompt = config["paths"]["prompts_dir"] / "cv_tailoring_prompt.md"
+    cv_prompt.write_text("Tailor for {company}; research {research_summary}", encoding="utf-8")
+    downloads = tmp_path / "Downloads"
+    downloads.mkdir()
+    old_doc = downloads / "old.docx"
+    make_doc(old_doc, "Example Energy old CV Experience Education Skills")
+    config["paths"]["downloads_dir"] = downloads
+    config["paths"]["database"] = tmp_path / "state.sqlite"
+    state = StateStore(config["paths"]["database"])
+    state.initialize()
+    state.transition(2, "Example Energy", "RESEARCH_READY")
+    state.transition(2, "Example Energy", "PENDING_APPROVAL")
+    state.transition(2, "Example Energy", "APPROVED")
+    state.transition(2, "Example Energy", "APPLICATION_PACKAGE_READY")
+    state.transition(2, "Example Energy", "AWAITING_AI_OUTPUT")
+    package = build_input_package(2, config, role="Speculative Approach")
+    opened_urls = []
+    opened_files = []
+    service = SupervisedChatGPTHandoff(
+        config, state, browser_open=opened_urls.append, open_file=opened_files.append, stable_polls=2
+    )
+    try:
+        session = service.start_for_package(package)
+        assert session and session["company_id"] == "2"
+        assert opened_urls[0] == "https://chatgpt.com/"
+        assert "127.0.0.1" in opened_urls[1]
+        page = service._render_page(state.active_handoff())
+        assert "Copy CV prompt" in page and "Copy proposal prompt" in page
+        assert "Open master CV" in page and "does not submit messages" in page
+        service.open_file(config["paths"]["master_cv"])
+        assert opened_files == [config["paths"]["master_cv"]]
+
+        cv_download = downloads / "Document.docx"
+        letter_download = downloads / "Document (1).docx"
+        make_doc(cv_download, "Example Energy Professional Experience Education Technical Skills")
+        assert service.monitor_downloads()["completed"] is False
+        assert service.monitor_downloads()["completed"] is False
+        make_doc(letter_download, "Dear Hiring Team, Example Energy. I am writing about the opportunity. Kind regards.")
+        assert service.monitor_downloads()["completed"] is False
+        assert service.monitor_downloads()["completed"] is True
+
+        output = config["paths"]["generated_dir"] / "2_Example Energy"
+        filed = {path.name for path in output.glob("*.docx")}
+        assert "Samuel Anyan_Example Energy_CV.docx" in filed
+        assert "Samuel Anyan_Example Energy_Proposal.docx" in filed
+        assert old_doc.exists()
+        assert not cv_download.exists() and not letter_download.exists()
+        assert state.get_handoff(2)["status"] == "completed"
+        assert state.get_company(2)["state"] == "DOCUMENTS_READY"
+        workbook = load_workbook(workbook_path)
+        assert workbook["03 Execution"]["F2"].value == "Documents Ready"
+        workbook.close()
+    finally:
+        service.close()
+
+
+def test_download_classifier_fails_closed_for_ambiguous_document():
+    assert classify_document(Path("document.docx"), "Example Energy consultant information.") is None
+    assert snapshot_downloads(Path("/path/that/does/not/exist")) == {}
 
 
 def test_apollo_csv_import_filters_identity_and_ranks_verified_contacts(tmp_path):
@@ -436,9 +503,10 @@ def test_cancel_unsent_batch_deletes_mock_draft_and_allows_new_snapshot(tmp_path
     cancel_email_batch(state, batch["batch_id"], provider)
     assert provider.drafts == {}
     assert state.get_batch(batch["batch_id"])["status"] == "cancelled"
-    (config["paths"]["generated_dir"] / "2_Example Energy" / "introduction.md").write_text(
-        "Revised introduction requiring fresh approval.", encoding="utf-8"
-    )
+    copy_path = config["paths"]["generated_dir"] / "2_Example Energy" / "outreach.json"
+    copy = json.loads(copy_path.read_text())
+    copy["messages"][0]["body"] = "Revised introduction requiring fresh approval."
+    copy_path.write_text(json.dumps(copy))
     replacement = create_email_batch(config, state)
 
     assert replacement["batch_id"] != batch["batch_id"]

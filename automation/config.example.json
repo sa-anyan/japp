@@ -12,6 +12,8 @@
     "database": "data/state/japp.sqlite",
     "backup_dir": "backups",
     "generated_dir": "data/generated",
+    "downloads_dir": "~/Downloads",
+    "private_repo_dir": "data/private_repo",
     "contacts_dir": "data/contacts",
     "apollo_import_dir": "automation/imports/apollo",
     "logs_dir": "logs",
@@ -38,7 +40,11 @@
     "target_titles": ["Hiring Manager", "Department Head", "Commercial Director", "Talent Acquisition"]
   },
   "ai": {"provider": "manual"},
-  "apollo": {"provider": "csv", "reveal_emails": false, "max_reveals_per_run": 0},
+  "exchange": {"repository": "sa-anyan/japp_data", "branch": "main"},
+  "apollo": {
+    "provider": "csv", "reveal_emails": false, "max_reveals_per_run": 0,
+    "api_key_env": "APOLLO_API_KEY", "max_contacts_per_company": 5
+  },
   "mail": {
     "provider": "mock",
     "auto_draft": false,
@@ -49,6 +55,8 @@
     "max_send_pause_seconds": 60,
     "subject_template": "Introduction: {company}",
     "outlook": {
+      "auth_flow": "device_code",
+      "client_id": "",
       "tenant": "common",
       "client_id_env": "JAPP_MICROSOFT_CLIENT_ID",
       "scopes": ["Mail.ReadWrite", "Mail.Send", "User.Read", "offline_access"]

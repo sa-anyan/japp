@@ -66,17 +66,23 @@ class GoogleDeviceCodeTokenProvider:
         raise TimeoutError("Google device-code sign-in expired")
 
 
-def create_mail_provider(config: dict[str, Any], *, client: httpx.Client | None = None):
+def create_mail_provider(config: dict[str, Any], *, client: httpx.Client | None = None,
+                         draft_only: bool = False):
     mail = config["mail"]
     provider = mail["provider"]
     if provider == "mock":
         return MockMailProvider()
     if provider == "outlook":
         settings = mail["outlook"]
-        token = MicrosoftDeviceCodeTokenProvider(
-            client_id=os.environ.get(settings["client_id_env"], ""),
+        from .microsoft_browser import MicrosoftBrowserTokenProvider
+        flow = settings.get("auth_flow", "device_code")
+        if flow not in {"device_code", "browser"}:
+            raise ValueError("mail.outlook.auth_flow must be device_code or browser")
+        token_class = MicrosoftBrowserTokenProvider if flow == "browser" else MicrosoftDeviceCodeTokenProvider
+        token = token_class(
+            client_id=os.environ.get(settings["client_id_env"], "") or settings.get("client_id", ""),
             tenant=settings["tenant"],
-            scopes=settings["scopes"],
+            scopes=[s for s in settings["scopes"] if not draft_only or s.casefold() != "mail.send"],
             client=client,
         )
         return GraphOutlookProvider(token.get_token, client=client)

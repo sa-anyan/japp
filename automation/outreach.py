@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import json
 import random
 import re
 import time
@@ -26,23 +27,28 @@ class BatchSafetyError(RuntimeError):
     pass
 
 
-def _read_template(path: Path) -> str:
-    if not path.is_file():
-        raise BatchSafetyError(f"Outreach template is missing: {path}")
-    content = path.read_text(encoding="utf-8").strip()
-    if not content or "add your approved outreach template" in content.casefold():
-        raise BatchSafetyError("Fill in prompts/outreach_template.md before creating email drafts")
-    return content
-
-
-def _render(template: str, values: dict[str, str]) -> str:
-    def replace(match: re.Match[str]) -> str:
-        return values.get(match.group(1), match.group(0))
-    rendered = re.sub(r"\{([a-z_]+)\}", replace, template)
-    unresolved = re.findall(r"\{([a-z_]+)\}", rendered)
-    if unresolved:
-        raise BatchSafetyError(f"Outreach template has unsupported placeholders: {', '.join(sorted(set(unresolved)))}")
-    return rendered
+def validate_final_outreach(payload: dict[str, Any], contacts: list[dict[str, Any]]) -> dict[str, dict[str, str]]:
+    """Validate final AI-returned copy, never treat a writing prompt as an email."""
+    if not isinstance(payload, dict) or not isinstance(payload.get("messages"), list) or not payload["messages"]:
+        raise BatchSafetyError("outreach.json must contain a non-empty messages array")
+    verified = {c["email"].strip().casefold() for c in contacts
+                if c.get("email") and c["email_status"] == "verified" and not c.get("suppressed")}
+    result = {}
+    for message in payload["messages"]:
+        if not isinstance(message, dict) or any(not isinstance(message.get(k), str) or not message[k].strip()
+                                                for k in ("recipient", "subject", "body")):
+            raise BatchSafetyError("Every final email requires recipient, subject and body")
+        email = message["recipient"].strip().casefold()
+        if email not in verified or email in result:
+            raise BatchSafetyError("Final email recipient is duplicated, unknown, suppressed or unverified")
+        if "\n" in message["subject"] or "\r" in message["subject"]:
+            raise BatchSafetyError("Email subjects must be single-line")
+        content = message["subject"] + "\n" + message["body"]
+        if re.search(r"\{[a-zA-Z_][^{}\n]*\}|\[(?:recipient|company|hook|the pitch|value proposition|call to action|linkedin|portfolio|verified|your|name)[^\]]*\]",
+                     content, re.IGNORECASE):
+            raise BatchSafetyError("Final outreach contains unresolved prompt placeholders")
+        result[email] = {key: message[key].strip() for key in ("subject", "body")}
+    return result
 
 
 def _sha256(path: Path) -> str:
@@ -58,12 +64,14 @@ def _assets_for_company(config: dict[str, Any], company_id: str, company: str) -
     if not folder.is_dir():
         raise BatchSafetyError(f"Generated document folder is missing for company {company_id}")
     cv_files = sorted(folder.glob("*_CV.docx"))
-    letter_files = sorted(folder.glob("*_Cover Letter.docx"))
+    letter_files = sorted(folder.glob("*_Proposal.docx")) or sorted(folder.glob("*_Cover Letter.docx"))
     if not cv_files or not letter_files:
         raise BatchSafetyError(f"CV and cover letter are required before drafting for {company_id}")
     cv_path, letter_path = cv_files[-1], letter_files[-1]
-    validate_docx(cv_path, company)
+    validate_docx(cv_path, company, document_kind="cv")
     validate_docx(letter_path, company)
+    if (folder / "outreach.json").is_file():
+        return [cv_path, letter_path], ""
     intro_path = folder / "introduction.md"
     if not intro_path.is_file():
         raise BatchSafetyError(f"Manual AI introduction is missing: {intro_path}")
@@ -74,9 +82,9 @@ def _assets_for_company(config: dict[str, Any], company_id: str, company: str) -
 
 
 def create_email_batch(config: dict[str, Any], state: StateStore,
-                       *, company_ids: set[str] | None = None) -> dict[str, Any]:
+                       *, company_ids: set[str] | None = None,
+                       excluded_contact_ids: set[int] | None = None) -> dict[str, Any]:
     approved = eligible_companies(config["paths"]["workbook"], config["paths"]["registry"])
-    template = _read_template(Path(config["paths"]["prompts_dir"]) / "outreach_template.md")
     messages = []
     skipped: list[str] = []
     contacts = state.list_contacts()
@@ -86,10 +94,15 @@ def create_email_batch(config: dict[str, Any], state: StateStore,
             continue
         company_id = company_record.company_id
         company = company_record.company
+        saved_company = state.get_company(company_id)
+        if saved_company and saved_company["state"] == "COMPLETED":
+            skipped.append(f"{company_id}: company already completed in SQLite")
+            continue
         company_contacts = [c for c in contacts if c["company_id"] == company_id]
         eligible_contacts = [
             contact for contact in company_contacts
             if contact["email"] and contact["email_status"] == "verified"
+            and contact["contact_id"] not in (excluded_contact_ids or set())
             and not contact["suppressed"] and not state.contact_has_message(contact["contact_id"])
             and contact_is_email_eligible(
                 config["paths"]["workbook"], company_id,
@@ -101,6 +114,11 @@ def create_email_batch(config: dict[str, Any], state: StateStore,
             continue
         try:
             attachments, introduction = _assets_for_company(config, company_id, company)
+            folder = Path(config["paths"]["generated_dir"]) / f"{company_id}_{safe_component(company)}"
+            final_path = folder / "outreach.json"
+            final_copy = validate_final_outreach(json.loads(final_path.read_text(encoding="utf-8")), company_contacts) if final_path.is_file() else None
+            if final_copy is None:
+                raise BatchSafetyError("Final outreach.json is required; generate it using cv_tailoring_prompt.md modules O1–O3")
         except (BatchSafetyError, DocumentValidationError) as exc:
             skipped.append(f"{company_id}: {exc}")
             continue
@@ -109,14 +127,11 @@ def create_email_batch(config: dict[str, Any], state: StateStore,
             for path in attachments
         ]
         for contact in eligible_contacts[:5]:
-            values = {
-                "company": company,
-                "name": contact["full_name"],
-                "role": contact["role"],
-                "introduction": introduction,
-            }
-            body = _render(template, values)
-            subject = config["mail"]["subject_template"].format(**values)
+            copy = final_copy.get(contact["email"].strip().casefold())
+            if copy is None:
+                skipped.append(f"{company_id}: no final outreach for contact {contact['contact_id']}")
+                continue
+            body, subject = copy["body"], copy["subject"]
             identity = stable_hash([
                 company_id,
                 contact["contact_id"],
@@ -194,6 +209,12 @@ def draft_email_batch(config: dict[str, Any], state: StateStore, batch_id: str,
         except Exception as exc:
             state.finish_message(message["idempotency_key"], "failed", error=str(exc))
             failed += 1
+    stored_messages = state.list_messages(batch_id)
+    for company_id in {message["company_id"] for message in payload["messages"]}:
+        expected = [m for m in payload["messages"] if m["company_id"] == company_id]
+        actual = [m for m in stored_messages if m["company_id"] == company_id]
+        if len(actual) == len(expected) and all(m["status"] == "drafted" for m in actual):
+            update_pipeline_status(config["paths"]["workbook"], company_id, "Email Drafted")
     return {"drafted": drafted, "skipped": skipped, "failed": failed}
 
 
@@ -281,9 +302,11 @@ def send_approved_batch(config: dict[str, Any], state: StateStore, batch_id: str
              if item["contact_id"] == message["contact_id"]),
             None,
         )
+        company_state = state.get_company(message["company_id"])
         if (
             not stored or stored["status"] != "drafted" or not stored["provider_id"]
             or message["company_id"] not in eligible
+            or (company_state and company_state["state"] == "COMPLETED")
             or message["email_status"] != "verified"
             or not contact or contact["suppressed"]
             or contact["email_status"] != "verified"
