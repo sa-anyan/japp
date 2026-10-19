@@ -109,7 +109,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", type=Path, help="Optional local JSON config path")
     commands = parser.add_subparsers(dest="command", required=True)
 
-    commands.add_parser("start", help="Start supervised local services")
+    start = commands.add_parser("start", help="Resume the private research-to-Outlook-drafts workflow")
+    start.add_argument("--plan", action="store_true", help="Read approvals only; no network or writes")
+    start.add_argument("--no-mail", action="store_true", help="Advance packages/handoffs without Outlook sign-in")
+    start.add_argument("--services", action="store_true", help="Run the original background scheduler instead")
+    start.add_argument("--max-reveals", type=int, default=3, help="Browser handoff reveal-attempt cap (default 3; not a credit-price guarantee)")
+    start.add_argument("--watch", action="store_true", help="Watch GitHub/workbook changes every 60 seconds; stop with Ctrl-C")
     commands.add_parser("stop", help="Request graceful shutdown after the current step")
     commands.add_parser("status", help="Show engine and workflow status")
     commands.add_parser("doctor", help="Validate local configuration and workbook")
@@ -237,7 +242,17 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "status":
             return _status(config)
         if args.command == "start":
-            start_engine(config)
+            if args.services:
+                start_engine(config)
+            elif args.watch:
+                if args.plan:
+                    parser.error("--plan cannot be combined with --watch")
+                from .autopilot import watch
+                watch(config, mail=not args.no_mail, max_reveals=args.max_reveals)
+            else:
+                from .autopilot import run_cycle
+                print(json.dumps(run_cycle(config, mail=not args.no_mail, plan=args.plan,
+                                           max_reveals=args.max_reveals), indent=2))
             return 0
         if args.command == "stop":
             if request_stop(paths["stop_file"], paths["lock_file"]):

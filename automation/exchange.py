@@ -286,9 +286,12 @@ def _install(source: Path, target: Path) -> None:
         shutil.copyfile(source, target)
 
 
-def collect_outputs(config: dict[str, Any], repo: PrivateRepository, state: StateStore) -> dict[str, Any]:
+def collect_outputs(config: dict[str, Any], repo: PrivateRepository, state: StateStore, *,
+                    company_ids: set[str] | None = None) -> dict[str, Any]:
     collected, waiting = [], []
     for row in approved(config):
+        if company_ids is not None and row.company_id not in company_ids:
+            continue
         folder = company_folder(repo.path, row.company_id, row.company)
         manifest_path = inside(folder, "outputs/manifest.json")
         if not manifest_path.is_file():

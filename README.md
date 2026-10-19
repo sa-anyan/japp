@@ -22,9 +22,13 @@ Install dependencies with `.venv/bin/python -m pip install -r requirements.txt`.
 ## Master automation engine
 
 For the private GitHub research/CV workflow, see [Private data workflow](docs/commands/private_exchange.md).
-Use `main.py exchange research`, `package`, `contacts`, then `deliver` to exchange work
-through the private `sa-anyan/japp_data` repository. These commands do not submit ChatGPT
-messages or read its responses. Final documents and emails are returned through GitHub.
+Use `main.py start` to resume the private `sa-anyan/japp_data` workflow, or
+`main.py start --watch` to wait for workbook/GitHub changes. The controller selects
+unfinished stages, prepares compact browser/ChatGPT handoffs and reconciles the
+mailbox before creating Outlook drafts. It never submits ChatGPT, reads its
+responses or sends email. See [the execution guide](docs/AUTOPILOT.md).
+Existing `exchange research`, `package`, `contacts`, `collect` and `deliver`
+commands remain available for individual stages.
 
 JAPP is Python-first, with Excel as the approval interface, SQLite for resumable workflow state, GitHub-tracked JSON as research input, and APScheduler for local monitoring. Integrations use replaceable providers. Defaults are intentionally non-live: AI uses an attended handoff, Apollo uses CSV import, mail uses a mock provider, and sending/automatic drafting are disabled.
 
@@ -33,9 +37,13 @@ JAPP is Python-first, with Excel as the approval interface, SQLite for resumable
 .venv/bin/python main.py sync --dry-run
 .venv/bin/python main.py run --approved-only --dry-run
 .venv/bin/python main.py start
+.venv/bin/python main.py start --plan
+.venv/bin/python main.py start --watch
 .venv/bin/python main.py stop
 .venv/bin/python main.py status
 ```
+
+The original APScheduler service is available with `main.py start --services`.
 
 The production workbook is configured at `data/reference/JAPP_Automation_Dashboard.xlsx`. Research sync matches both company ID and name, fills only blank or previously script-owned cells, and never changes `01 Companies` or the user approval fields. Set `research.pull_before_sync` in the ignored `automation/config.json` only if you want the guarded GitHub pull enabled; it refuses to pull when local research files have edits.
 

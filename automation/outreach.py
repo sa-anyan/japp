@@ -82,7 +82,8 @@ def _assets_for_company(config: dict[str, Any], company_id: str, company: str) -
 
 
 def create_email_batch(config: dict[str, Any], state: StateStore,
-                       *, company_ids: set[str] | None = None) -> dict[str, Any]:
+                       *, company_ids: set[str] | None = None,
+                       excluded_contact_ids: set[int] | None = None) -> dict[str, Any]:
     approved = eligible_companies(config["paths"]["workbook"], config["paths"]["registry"])
     messages = []
     skipped: list[str] = []
@@ -101,6 +102,7 @@ def create_email_batch(config: dict[str, Any], state: StateStore,
         eligible_contacts = [
             contact for contact in company_contacts
             if contact["email"] and contact["email_status"] == "verified"
+            and contact["contact_id"] not in (excluded_contact_ids or set())
             and not contact["suppressed"] and not state.contact_has_message(contact["contact_id"])
             and contact_is_email_eligible(
                 config["paths"]["workbook"], company_id,

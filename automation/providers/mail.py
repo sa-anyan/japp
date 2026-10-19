@@ -151,6 +151,22 @@ class GraphOutlookProvider:
                 "email": profile.get("mail") or profile.get("userPrincipalName", ""),
                 "drafts_access": bool(folder.get("id"))}
 
+    def application_messages(self) -> list[dict]:
+        """Read headers from Drafts and Sent Items; no bodies or automatic retries."""
+        messages = []
+        for folder in ("drafts", "sentitems"):
+            endpoint = (f"/me/mailFolders/{folder}/messages?$top=100&"
+                        "$select=id,subject,toRecipients,isDraft,sentDateTime,hasAttachments")
+            while endpoint:
+                data = self._request("GET", endpoint).json()
+                messages.extend(data.get("value", []))
+                following = data.get("@odata.nextLink", "")
+                # Never send the bearer token to an untrusted pagination host.
+                if following and not following.startswith(self.graph_url + "/"):
+                    raise ValueError("Unexpected Outlook pagination URL")
+                endpoint = following.removeprefix(self.graph_url) if following else ""
+        return messages
+
     def send_draft(self, provider_id: str) -> str:
         self._request("POST", f"/me/messages/{provider_id}/send")
         return provider_id
